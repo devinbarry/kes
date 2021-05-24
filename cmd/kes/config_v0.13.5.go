@@ -47,13 +47,20 @@ type serverConfigV0135 struct {
 }
 
 func (c *serverConfigV0135) Migrate() serverConfig {
-	return serverConfig{
+	config := serverConfig{
 		Addr:     c.Addr,
 		Root:     c.Root,
 		TLS:      c.TLS,
-		Policies: c.Policies,
 		Cache:    c.Cache,
 		Log:      c.Log,
 		KeyStore: c.Keys,
 	}
+	config.Policies = make(map[string]policyConfig, len(c.Policies))
+	for name, policy := range c.Policies {
+		config.Policies[name] = policyConfig{
+			Allow:      policy.Paths,
+			Identities: policy.Identities,
+		}
+	}
+	return config
 }
