@@ -103,7 +103,8 @@ Options:
 Examples:
     $ kes identity new Client-1
     $ kes identity new --ip "192.0.2.40" --ip "192.0.2.10" Client-1
-    $ kes identity new --key client1.key --cert client1.key --encrypt Client-1
+    $ kes identity new --key client1.key --cert client1.crt --encrypt Client-1
+    $ kes identity new --key client1.key --cert client1.crt --encrypt Client-1 --expiry 8760h
 `
 
 func newIdentityCmd(args []string) {
