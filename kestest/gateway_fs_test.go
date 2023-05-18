@@ -14,20 +14,23 @@ func TestGatewayFS(t *testing.T) {
 		t.Skip("FS tests disabled. Use -fs.path=<path> to enable them.")
 	}
 	var err error
-	store, err = fs.NewStore(*fsPath)
+	store, err := fs.NewStore(*fsPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Run("metrics", TestMetrics)
-	t.Run("apis", TestAPIs)
-	t.Run("createkey", TestCreateKey)
-	t.Run("importkey", TestImportKey)
-	t.Run("generatekey", TestGenerateKey)
-	t.Run("encryptket", TestEncryptKey)
-	t.Run("decryptkey", TestDecryptKey)
-	t.Run("decryptkeyall", TestDecryptKeyAll)
-	t.Run("describepolicy", TestDescribePolicy)
-	t.Run("getpolicy", TestGetPolicy)
-	t.Run("selfdescribe", TestSelfDescribe)
+	ctx, cancel := testingContext(t)
+	defer cancel()
+
+	t.Run("Metrics", func(t *testing.T) { testMetrics(ctx, store, t) })
+	t.Run("APIs", func(t *testing.T) { testAPIs(ctx, store, t) })
+	t.Run("CreateKey", func(t *testing.T) { testCreateKey(ctx, store, t) })
+	t.Run("ImportKey", func(t *testing.T) { testImportKey(ctx, store, t) })
+	t.Run("GenerateKey", func(t *testing.T) { testGenerateKey(ctx, store, t) })
+	t.Run("EncryptKey", func(t *testing.T) { testEncryptKey(ctx, store, t) })
+	t.Run("DecryptKey", func(t *testing.T) { testDecryptKey(ctx, store, t) })
+	t.Run("DecryptKeyAll", func(t *testing.T) { testDecryptKeyAll(ctx, store, t) })
+	t.Run("DescribePolicy", func(t *testing.T) { testDescribePolicy(ctx, store, t) })
+	t.Run("GetPolicy", func(t *testing.T) { testGetPolicy(ctx, store, t) })
+	t.Run("SelfDescribe", func(t *testing.T) { testSelfDescribe(ctx, store, t) })
 }
