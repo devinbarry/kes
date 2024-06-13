@@ -200,7 +200,7 @@ Options:
 
 Examples:
     $ kes identity new
-    $ kes identity new --ip "192.0.2.40" --ip "192.0.2.10" localhost
+    $ kes identity new --ip "192.0.2.40" --ip "192.0.2.10" --key private.key --cert public.crt localhost
     $ kes identity new --key server.key --cert server.crt --encrypt --expiry 8760h kes-server.local
 `
 
