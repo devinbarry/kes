@@ -1,0 +1,8 @@
+# Time-boxed: three HIGH Go standard-library denial-of-service advisories fixed in Go 1.27.2 (8 October 2026
+# security release). The only golang:1.27.2-alpine3.24 image was pushed 2026-10-10T10:23Z and is inside the
+# 48-hour quarantine for new releases until 2026-10-12T10:24Z; it must then be mirrored to the build mirror and
+# pinned in the Dockerfile. Exposure meanwhile: KES publishes no ports; only MinIO and Alloy on the stack network
+# reach it. Each entry expires so the scan fails again until the builder is bumped. Never extend an expiry.
+CVE-2026-78667 exp:2026-10-13
+CVE-2026-78669 exp:2026-10-13
+CVE-2026-97031 exp:2026-10-13
