@@ -8,8 +8,8 @@ open-source build exists, so this fork keeps it patched for our own use only.
 
 The fork follows our deployment, not upstream compatibility:
 
-- **Vault is the only key store.** The AWS, Azure, GCP, Fortanix, Gemalto, Entrust and filesystem stores are
-  removed.
+- **Vault is the only key store,** over `https://` only, with the K/V v2 engine and AppRole login. The AWS,
+  Azure, GCP, Fortanix, Gemalto, Entrust and filesystem stores, K/V v1 and Kubernetes login are removed.
 - **TLS 1.3 everywhere.** The server, the Vault client and the CLI refuse anything older.
 - **Every connection needs a client certificate.** The per-route `skip_auth` option and the unwired TLS-proxy
   option are removed.

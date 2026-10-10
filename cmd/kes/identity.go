@@ -86,22 +86,22 @@ func identityCmd(args []string) {
 		}
 
 		buf := &strings.Builder{}
-		tui.Fprintln(buf, "Your API key:")
-		tui.Fprintln(buf)
-		tui.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(key.String()))
-		tui.Fprintln(buf)
-		tui.Fprintln(buf, "This is the only time it is shown. Keep it secret and secure!")
-		tui.Fprintln(buf)
-		tui.Fprintln(buf, "Your API key's identity:")
-		tui.Fprintln(buf)
-		tui.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(key.Identity().String()))
-		tui.Fprintln(buf)
-		tui.Fprintln(buf, "The identity is not a secret and can be shared securely.")
-		tui.Fprintln(buf, "Peers need your identity in order to verify your API key.")
-		tui.Fprintln(buf)
-		tui.Fprintln(buf, "This identity can be re-computed again via:")
-		tui.Fprintln(buf)
-		tui.Fprintf(buf, "  $ kes identity %s", key.String())
+		fmt.Fprintln(buf, "Your API key:")
+		fmt.Fprintln(buf)
+		fmt.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(key.String()))
+		fmt.Fprintln(buf)
+		fmt.Fprintln(buf, "This is the only time it is shown. Keep it secret and secure!")
+		fmt.Fprintln(buf)
+		fmt.Fprintln(buf, "Your API key's identity:")
+		fmt.Fprintln(buf)
+		fmt.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(key.Identity().String()))
+		fmt.Fprintln(buf)
+		fmt.Fprintln(buf, "The identity is not a secret and can be shared securely.")
+		fmt.Fprintln(buf, "Peers need your identity in order to verify your API key.")
+		fmt.Fprintln(buf)
+		fmt.Fprintln(buf, "This identity can be re-computed again via:")
+		fmt.Fprintln(buf)
+		fmt.Fprintf(buf, "  $ kes identity %s", key.String())
 		tui.Println(tui.NewStyle().Border(tui.HiddenBorder()).Padding(0, 0, 0, 0).Render(buf.String()))
 		return
 	}
@@ -113,12 +113,12 @@ func identityCmd(args []string) {
 		}
 
 		buf := &strings.Builder{}
-		tui.Fprintln(buf, "Identity:")
-		tui.Fprintln(buf)
-		tui.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(identity.String()))
-		tui.Fprintln(buf)
-		tui.Fprintln(buf, "An identity is a fingerprint of your API key")
-		tui.Fprint(buf, "or certificate and can be shared securely.")
+		fmt.Fprintln(buf, "Identity:")
+		fmt.Fprintln(buf)
+		fmt.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(identity.String()))
+		fmt.Fprintln(buf)
+		fmt.Fprintln(buf, "An identity is a fingerprint of your API key")
+		fmt.Fprint(buf, "or certificate and can be shared securely.")
 		tui.Println(tui.NewStyle().Border(tui.HiddenBorder()).Padding(0, 0, 0, 0).Render(buf.String()))
 	}
 	if key, err := kes.ParseAPIKey(flags.Arg(0)); err == nil {
@@ -165,12 +165,12 @@ func identityCmd(args []string) {
 				return
 			}
 			buf := &strings.Builder{}
-			tui.Fprintln(buf, "Your API key:")
-			tui.Fprintln(buf)
-			tui.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(apiKey))
-			tui.Fprintln(buf)
-			tui.Fprintf(buf, "It corresponds to the private key in: %s.\n", filename)
-			tui.Fprint(buf, "Keep it secret and secure!")
+			fmt.Fprintln(buf, "Your API key:")
+			fmt.Fprintln(buf)
+			fmt.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(apiKey))
+			fmt.Fprintln(buf)
+			fmt.Fprintf(buf, "It corresponds to the private key in: %s.\n", filename)
+			fmt.Fprint(buf, "Keep it secret and secure!")
 			tui.Println(tui.NewStyle().Border(tui.HiddenBorder()).Padding(0, 0, 0, 0).Render(buf.String()))
 			return
 		}
@@ -340,27 +340,27 @@ func newIdentityCmd(args []string) {
 		bold = bold.Bold(true)
 	}
 	var buffer strings.Builder
-	tui.Fprintln(&buffer, "Your API key:")
-	tui.Fprintln(&buffer)
-	tui.Fprintln(&buffer, "   "+bold.Render(key.String())+"\n")
-	tui.Fprintln(&buffer, "This is the only time it is shown. Keep it secret and secure!")
-	tui.Fprintln(&buffer)
-	tui.Fprintln(&buffer, "Your Identity:")
-	tui.Fprintln(&buffer)
-	tui.Fprintln(&buffer, "   "+bold.Render(key.Identity().String())+"\n")
-	tui.Fprintln(&buffer, "The identity is not a secret. It can be shared. Any peer")
-	tui.Fprintln(&buffer, "needs this identity in order to verify your API key.")
+	fmt.Fprintln(&buffer, "Your API key:")
+	fmt.Fprintln(&buffer)
+	fmt.Fprintln(&buffer, "   "+bold.Render(key.String())+"\n")
+	fmt.Fprintln(&buffer, "This is the only time it is shown. Keep it secret and secure!")
+	fmt.Fprintln(&buffer)
+	fmt.Fprintln(&buffer, "Your Identity:")
+	fmt.Fprintln(&buffer)
+	fmt.Fprintln(&buffer, "   "+bold.Render(key.Identity().String())+"\n")
+	fmt.Fprintln(&buffer, "The identity is not a secret. It can be shared. Any peer")
+	fmt.Fprintln(&buffer, "needs this identity in order to verify your API key.")
 	if keyPath != "" && certPath != "" {
-		tui.Fprintln(&buffer)
-		tui.Fprintf(&buffer, "The generated TLS private key is stored at: %s\n", keyPath)
-		tui.Fprintf(&buffer, "The generated TLS certificate is stored at: %s\n", certPath)
+		fmt.Fprintln(&buffer)
+		fmt.Fprintf(&buffer, "The generated TLS private key is stored at: %s\n", keyPath)
+		fmt.Fprintf(&buffer, "The generated TLS certificate is stored at: %s\n", certPath)
 	}
-	tui.Fprintln(&buffer)
-	tui.Fprintln(&buffer, "The identity can be computed again via:")
-	tui.Fprintln(&buffer)
-	tui.Fprintf(&buffer, "    kes identity of %s\n", key.String())
+	fmt.Fprintln(&buffer)
+	fmt.Fprintln(&buffer, "The identity can be computed again via:")
+	fmt.Fprintln(&buffer)
+	fmt.Fprintf(&buffer, "    kes identity of %s\n", key.String())
 	if keyPath != "" && certPath != "" {
-		tui.Fprintf(&buffer, "    kes identity of %s", certPath)
+		fmt.Fprintf(&buffer, "    kes identity of %s", certPath)
 	}
 	cli.Println(buffer.String())
 }
@@ -419,9 +419,9 @@ func ofIdentityCmd(args []string) {
 	}
 	if cli.IsTerminal() {
 		var buffer strings.Builder
-		tui.Fprintln(&buffer, "Identity:")
-		tui.Fprintln(&buffer)
-		tui.Fprintln(&buffer, "   "+tui.NewStyle().Bold(true).Render(identity.String()))
+		fmt.Fprintln(&buffer, "Identity:")
+		fmt.Fprintln(&buffer)
+		fmt.Fprintln(&buffer, "   "+tui.NewStyle().Bold(true).Render(identity.String()))
 		cli.Print(buffer.String())
 	} else {
 		tui.Print(identity)
@@ -625,7 +625,7 @@ func lsIdentityCmd(args []string) {
 		style = tui.NewStyle().Underline(cli.IsTerminal())
 		buf   = &strings.Builder{}
 	)
-	tui.Fprintln(buf, style.Render("Identity"))
+	fmt.Fprintln(buf, style.Render("Identity"))
 	for _, id := range ids {
 		buf.WriteString(id.String())
 		buf.WriteByte('\n')

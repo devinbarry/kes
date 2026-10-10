@@ -30,10 +30,6 @@ const (
 	// EngineAppRole is the Hashicorp Vault default AppRole authentication
 	// engine path.
 	EngineAppRole = "approle"
-
-	// EngineKubernetes is the Hashicorp Vault default Kubernetes
-	// authentication engine path.
-	EngineKubernetes = "kubernetes"
 )
 
 // AppRole contains authentication information
@@ -79,52 +75,6 @@ func (a *AppRole) Clone() *AppRole {
 		Namespace: a.Namespace,
 		ID:        a.ID,
 		Secret:    a.Secret,
-	}
-}
-
-// Kubernetes contains authentication information
-// for the Hashicorp Vault Kubernetes authentication
-// API.
-//
-// Ref: https://www.vaultproject.io/api/auth/kubernetes
-type Kubernetes struct {
-	// Engine is the authentication engine path
-	//
-	// Hashicorp Vault allows multiple engines of the
-	// same type mounted at the same time and/or engines
-	// mounted at arbitrary paths.
-	Engine string
-
-	// Namespace is the Vault namespace in which the Kubernetes
-	// authentication is performed. It can be used to authenticate
-	// in a different namespace compared to the secret engine
-	// namespace. For example, authenticate within the root
-	// namespace but use a team-specific namespace for the secret
-	// engine.
-	//
-	// If empty, the VaultKeyStore namespace is used, if set.
-	// A single "/" is treated as alias for the Vault root
-	// namespace such that no namespace header is sent as part
-	// of the request.
-	Namespace string
-
-	// Role is the JWT role.
-	Role string
-
-	// JWT is the issued authentication token.
-	JWT string
-}
-
-// Clone returns a copy of the Kubernetes auth.
-func (k *Kubernetes) Clone() *Kubernetes {
-	if k == nil {
-		return nil
-	}
-	return &Kubernetes{
-		Engine:    k.Engine,
-		Namespace: k.Namespace,
-		Role:      k.Role,
-		JWT:       k.JWT,
 	}
 }
 
@@ -191,10 +141,6 @@ type Config struct {
 	// credentials.
 	AppRole *AppRole
 
-	// K8S contains the Vault Kubernetes authentication
-	// credentials.
-	K8S *Kubernetes
-
 	// Transit contains an optional Vault transit engine
 	// configuration for en/decrypting keys at the K/V
 	// engine. It adds an additional layer of encryption.
@@ -216,8 +162,8 @@ type Config struct {
 	Certificate string
 
 	// Path to the root CA certificate(s) used to verify the
-	// TLS certificate of the Vault server. If empty, the
-	// host's root CA set is used.
+	// TLS certificate of the Vault server. The release image
+	// contains no system roots, so it must be set there.
 	CAPath string
 
 	lock sync.RWMutex
@@ -240,7 +186,6 @@ func (c *Config) Clone() *Config {
 		Namespace:       c.Namespace,
 		Prefix:          c.Prefix,
 		AppRole:         c.AppRole.Clone(),
-		K8S:             c.K8S.Clone(),
 		Transit:         c.Transit.Clone(),
 		StatusPingAfter: c.StatusPingAfter,
 		PrivateKey:      c.PrivateKey,

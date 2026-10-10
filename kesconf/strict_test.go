@@ -33,7 +33,7 @@ func TestReadServerConfigYAML_Production(t *testing.T) {
 func TestReadServerConfigYAML_RejectsUnknownFields(t *testing.T) {
 	const (
 		TLS      = "address: 0.0.0.0:7373\nadmin:\n  identity: disabled\ntls:\n  key: ./k\n  cert: ./c\n"
-		Vault    = "  vault:\n    endpoint: https://127.0.0.1:8200\n    approle:\n      id: a\n      secret: b\n"
+		Vault    = "  vault:\n    endpoint: https://127.0.0.1:8200\n    version: v2\n    approle:\n      id: a\n      secret: b\n"
 		KeyStore = "keystore:\n" + Vault
 	)
 	tests := map[string]string{
@@ -42,6 +42,9 @@ func TestReadServerConfigYAML_RejectsUnknownFields(t *testing.T) {
 		"removed skip_auth":           TLS + "api:\n  /v1/metrics:\n    skip_auth: true\n" + KeyStore,
 		"removed tls proxy":           TLS + "  proxy:\n    identities: []\n" + KeyStore,
 		"misspelled vault option":     TLS + strings.Replace(KeyStore, "endpoint", "endpont", 1),
+		"removed kubernetes auth":     TLS + KeyStore + "    kubernetes:\n      role: kes\n",
+		"kv v1 engine":                TLS + strings.Replace(KeyStore, "version: v2", "version: v1", 1),
+		"missing kv version":          TLS + strings.Replace(KeyStore, "    version: v2\n", "", 1),
 	}
 	if _, err := ReadFrom(strings.NewReader(TLS + KeyStore)); err != nil {
 		t.Fatalf("Valid base config was rejected: %v", err)

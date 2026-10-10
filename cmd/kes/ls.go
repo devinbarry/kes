@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/signal"
@@ -143,14 +144,14 @@ func ls(args []string) {
 	buf := &strings.Builder{}
 	switch s := tui.NewStyle().Underline(true); {
 	case identities:
-		tui.Fprintln(buf, s.Render("Identity"))
+		fmt.Fprintln(buf, s.Render("Identity"))
 	case policies:
-		tui.Fprintln(buf, s.Render("Policy"))
+		fmt.Fprintln(buf, s.Render("Policy"))
 	default:
-		tui.Fprintln(buf, s.Render("Key"))
+		fmt.Fprintln(buf, s.Render("Key"))
 	}
 	for _, name := range names {
-		tui.Fprintln(buf, name)
+		fmt.Fprintln(buf, name)
 	}
 	tui.Print(buf)
 }

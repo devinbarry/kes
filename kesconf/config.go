@@ -84,13 +84,6 @@ type ymlFile struct {
 				Secret    env[string] `yaml:"secret"`
 			} `yaml:"approle"`
 
-			Kubernetes *struct {
-				Engine    env[string] `yaml:"engine"`
-				Namespace env[string] `yaml:"namespace"`
-				Role      env[string] `yaml:"role"`
-				JWT       env[string] `yaml:"jwt"` // Can be either a JWT or a path to a file containing a JWT
-			} `yaml:"kubernetes"`
-
 			TLS struct {
 				PrivateKey  env[string] `yaml:"key"`
 				Certificate env[string] `yaml:"cert"`
@@ -274,35 +267,17 @@ func ymlToKeyStore(y *ymlFile) (KeyStore, error) {
 		if y.KeyStore.Vault.Endpoint.Value == "" {
 			return nil, errors.New("kesconf: invalid vault keystore: no endpoint specified")
 		}
-		if y.KeyStore.Vault.AppRole == nil && y.KeyStore.Vault.Kubernetes == nil {
-			return nil, errors.New("kesconf: invalid vault keystore: no authentication method specified")
+		if y.KeyStore.Vault.AppRole == nil {
+			return nil, errors.New("kesconf: invalid vault keystore: no approle authentication specified")
 		}
-		if y.KeyStore.Vault.AppRole != nil && y.KeyStore.Vault.Kubernetes != nil {
-			return nil, errors.New("kesconf: invalid vault keystore: more than one authentication method specified")
+		if y.KeyStore.Vault.APIVersion.Value != "v2" {
+			return nil, errors.New("kesconf: invalid vault keystore: version must be v2")
 		}
-		if y.KeyStore.Vault.AppRole != nil {
-			if y.KeyStore.Vault.AppRole.ID.Value == "" {
-				return nil, errors.New("kesconf: invalid vault keystore: invalid approle config: no approle ID specified")
-			}
-			if y.KeyStore.Vault.AppRole.Secret.Value == "" {
-				return nil, errors.New("kesconf: invalid vault keystore: invalid approle config: no approle secret specified")
-			}
+		if y.KeyStore.Vault.AppRole.ID.Value == "" {
+			return nil, errors.New("kesconf: invalid vault keystore: invalid approle config: no approle ID specified")
 		}
-		if y.KeyStore.Vault.Kubernetes != nil {
-			if y.KeyStore.Vault.Kubernetes.JWT.Value == "" {
-				return nil, errors.New("kesconf: invalid vault keystore: invalid kubernetes config: no JWT specified")
-			}
-
-			// If the passed JWT value contains a path separator we assume it's a file.
-			// We always check for '/' and the OS-specific one make cover cases where
-			// a path is specified using '/' but the underlying OS is e.g. windows.
-			if jwt := y.KeyStore.Vault.Kubernetes.JWT.Value; strings.ContainsRune(jwt, '/') || strings.ContainsRune(jwt, os.PathSeparator) {
-				_, err := os.ReadFile(y.KeyStore.Vault.Kubernetes.JWT.Value)
-				if err != nil {
-					return nil, fmt.Errorf("kesconf: failed to read vault kubernetes JWT from '%s': %v", y.KeyStore.Vault.Kubernetes.JWT.Value, err)
-				}
-				// postpone resolving the JWT until actually logging in
-			}
+		if y.KeyStore.Vault.AppRole.Secret.Value == "" {
+			return nil, errors.New("kesconf: invalid vault keystore: invalid approle config: no approle secret specified")
 		}
 		if y.KeyStore.Vault.Transit != nil {
 			if y.KeyStore.Vault.Transit.KeyName.Value == "" {
@@ -333,14 +308,6 @@ func ymlToKeyStore(y *ymlFile) (KeyStore, error) {
 				Namespace: y.KeyStore.Vault.AppRole.Namespace.Value,
 				ID:        y.KeyStore.Vault.AppRole.ID.Value,
 				Secret:    y.KeyStore.Vault.AppRole.Secret.Value,
-			}
-		}
-		if y.KeyStore.Vault.Kubernetes != nil {
-			s.Kubernetes = &VaultKubernetesAuth{
-				Engine:    y.KeyStore.Vault.Kubernetes.Engine.Value,
-				Namespace: y.KeyStore.Vault.Kubernetes.Namespace.Value,
-				JWT:       y.KeyStore.Vault.Kubernetes.JWT.Value,
-				Role:      y.KeyStore.Vault.Kubernetes.Role.Value,
 			}
 		}
 		if y.KeyStore.Vault.Transit != nil {

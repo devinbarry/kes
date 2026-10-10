@@ -7,9 +7,7 @@ package vault
 import (
 	"context"
 	"errors"
-	"os"
 	"path"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -89,40 +87,6 @@ func (c *client) AuthenticateWithAppRole(login *AppRole) authFunc {
 		secret, err := client.Logical().WriteWithContext(ctx, path.Join("auth", login.Engine, "login"), map[string]interface{}{
 			"role_id":   login.ID,
 			"secret_id": login.Secret,
-		})
-		if secret == nil && err == nil {
-			// The Vault SDK eventually returns no error but also no
-			// secret. In this case have to return a (not very helpful)
-			// error to signal that the authentication failed - for some
-			// (unknown) reason.
-			return nil, errors.New("vault: authentication failed: SDK returned no error but also no token")
-		}
-		return secret, err
-	}
-}
-
-func (c *client) AuthenticateWithK8S(login *Kubernetes) authFunc {
-	return func(ctx context.Context) (*vaultapi.Secret, error) {
-		client := c.Client
-		switch {
-		case login.Namespace == "/": // Treat '/' as the root namespace
-			client = client.WithNamespace("") // Clear namespace
-		case login.Namespace != "":
-			client = client.WithNamespace(login.Namespace)
-		}
-
-		jwt := login.JWT
-		if strings.ContainsRune(jwt, '/') || strings.ContainsRune(jwt, os.PathSeparator) {
-			jwtBytes, err := os.ReadFile(jwt)
-			if err != nil {
-				return nil, err
-			}
-			jwt = string(jwtBytes)
-		}
-
-		secret, err := client.Logical().WriteWithContext(ctx, path.Join("auth", login.Engine, "login"), map[string]interface{}{
-			"role": login.Role,
-			"jwt":  jwt,
 		})
 		if secret == nil && err == nil {
 			// The Vault SDK eventually returns no error but also no

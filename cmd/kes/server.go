@@ -147,32 +147,32 @@ func startServer(addrFlag, configFlag string) error {
 		faint := tui.NewStyle().Faint(true)
 
 		buf := &strings.Builder{}
-		tui.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Version"), info.Version, faint.Render("commit="+info.CommitID))
-		tui.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Runtime"), fmt.Sprintf("%s %s/%s", info.Runtime, runtime.GOOS, runtime.GOARCH), faint.Render("compiler="+info.Compiler))
-		tui.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("License"), "AGPLv3", faint.Render("https://www.gnu.org/licenses/agpl-3.0.html"))
-		tui.Fprintf(buf, "%-33s %-12s 2015-%d  %s\n", blue.Render("Copyright"), "MinIO, Inc.", time.Now().Year(), faint.Render("https://min.io"))
-		tui.Fprintln(buf)
-		tui.Fprintf(buf, "%-33s %v\n", blue.Render("KMS"), conf.Keys)
-		tui.Fprintf(buf, "%-33s · https://%s\n", blue.Render("API"), net.JoinHostPort(ifaceIPs[0].String(), port))
+		fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Version"), info.Version, faint.Render("commit="+info.CommitID))
+		fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Runtime"), fmt.Sprintf("%s %s/%s", info.Runtime, runtime.GOOS, runtime.GOARCH), faint.Render("compiler="+info.Compiler))
+		fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("License"), "AGPLv3", faint.Render("https://www.gnu.org/licenses/agpl-3.0.html"))
+		fmt.Fprintf(buf, "%-33s %-12s 2015-%d  %s\n", blue.Render("Copyright"), "MinIO, Inc.", time.Now().Year(), faint.Render("https://min.io"))
+		fmt.Fprintln(buf)
+		fmt.Fprintf(buf, "%-33s %v\n", blue.Render("KMS"), conf.Keys)
+		fmt.Fprintf(buf, "%-33s · https://%s\n", blue.Render("API"), net.JoinHostPort(ifaceIPs[0].String(), port))
 		for _, ifaceIP := range ifaceIPs[1:] {
-			tui.Fprintf(buf, "%-11s · https://%s\n", " ", net.JoinHostPort(ifaceIP.String(), port))
+			fmt.Fprintf(buf, "%-11s · https://%s\n", " ", net.JoinHostPort(ifaceIP.String(), port))
 		}
 
-		tui.Fprintln(buf)
-		tui.Fprintf(buf, "%-33s https://min.io/docs/kes\n", blue.Render("Docs"))
+		fmt.Fprintln(buf)
+		fmt.Fprintf(buf, "%-33s https://min.io/docs/kes\n", blue.Render("Docs"))
 
-		tui.Fprintln(buf)
+		fmt.Fprintln(buf)
 		if _, err := hex.DecodeString(conf.Admin.String()); err == nil {
-			tui.Fprintf(buf, "%-33s %s\n", blue.Render("Admin"), conf.Admin)
+			fmt.Fprintf(buf, "%-33s %s\n", blue.Render("Admin"), conf.Admin)
 		} else {
-			tui.Fprintf(buf, "%-33s <disabled>\n", blue.Render("Admin"))
+			fmt.Fprintf(buf, "%-33s <disabled>\n", blue.Render("Admin"))
 		}
-		tui.Fprintf(buf, "%-33s error=stderr level=%s\n", blue.Render("Logs"), srv.ErrLevel.Level())
+		fmt.Fprintf(buf, "%-33s error=stderr level=%s\n", blue.Render("Logs"), srv.ErrLevel.Level())
 		if srv.AuditLevel.Level() <= slog.LevelInfo {
-			tui.Fprintf(buf, "%-11s audit=stdout level=%s\n", " ", srv.AuditLevel.Level())
+			fmt.Fprintf(buf, "%-11s audit=stdout level=%s\n", " ", srv.AuditLevel.Level())
 		}
 		if memLocked {
-			tui.Fprintf(buf, "%-33s %s\n", blue.Render("MLock"), "enabled")
+			fmt.Fprintf(buf, "%-33s %s\n", blue.Render("MLock"), "enabled")
 		}
 		return buf
 	}
@@ -211,8 +211,8 @@ func startServer(addrFlag, configFlag string) error {
 					tui.Fprintf(os.Stderr, "Failed to close previous keystore connections: %v\n", err)
 				}
 				buf := startupMessage(config)
-				tui.Fprintln(buf)
-				tui.Fprintln(buf, "=> Reloading configuration after SIGHUP signal completed.")
+				fmt.Fprintln(buf)
+				fmt.Fprintln(buf, "=> Reloading configuration after SIGHUP signal completed.")
 				tui.Println(buf.String())
 			}
 		}
@@ -245,8 +245,8 @@ func startServer(addrFlag, configFlag string) error {
 	}(ctx)
 
 	buf := startupMessage(conf)
-	tui.Fprintln(buf)
-	tui.Fprintln(buf, "=> Server is up and running...")
+	fmt.Fprintln(buf)
+	fmt.Fprintln(buf, "=> Server is up and running...")
 	tui.Println(buf.String())
 
 	if err = srv.ListenAndStart(ctx, addrFlag, conf); err != nil {

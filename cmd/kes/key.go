@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/signal"
@@ -231,10 +232,10 @@ func describeKeyCmd(args []string) {
 	hour, minute, sec := info.CreatedAt.Clock()
 
 	buf := &strings.Builder{}
-	tui.Fprintf(buf, "%-11s %s\n", "Name", info.Name)
-	tui.Fprintf(buf, "%-11s %s\n", "Algorithm", info.Algorithm)
-	tui.Fprintf(buf, "%-11s %04d-%02d-%02d %02d:%02d:%02d\n", "Date", year, month, day, hour, minute, sec)
-	tui.Fprintf(buf, "%-11s %s", "Owner", info.CreatedBy)
+	fmt.Fprintf(buf, "%-11s %s\n", "Name", info.Name)
+	fmt.Fprintf(buf, "%-11s %s\n", "Algorithm", info.Algorithm)
+	fmt.Fprintf(buf, "%-11s %04d-%02d-%02d %02d:%02d:%02d\n", "Date", year, month, day, hour, minute, sec)
+	fmt.Fprintf(buf, "%-11s %s", "Owner", info.CreatedBy)
 	tui.Print(buf)
 }
 
@@ -308,7 +309,7 @@ func lsKeyCmd(args []string) {
 		style = tui.NewStyle().Underline(cli.IsTerminal())
 		buf   = &strings.Builder{}
 	)
-	tui.Fprintln(buf, style.Render("Key"))
+	fmt.Fprintln(buf, style.Render("Key"))
 	for _, name := range names {
 		buf.WriteString(name)
 		buf.WriteByte('\n')

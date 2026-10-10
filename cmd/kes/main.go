@@ -103,10 +103,10 @@ func main() {
 
 		faint := tui.NewStyle().Faint(true)
 		buf := &strings.Builder{}
-		tui.Fprintf(buf, "Version    %-22s %s\n", info.Version, faint.Render("commit="+info.CommitID))
-		tui.Fprintf(buf, "Runtime    %-22s %s\n", fmt.Sprintf("%s %s/%s", info.Runtime, runtime.GOOS, runtime.GOARCH), faint.Render("compiler="+info.Compiler))
-		tui.Fprintf(buf, "License    %-22s %s\n", "AGPLv3", faint.Render("https://www.gnu.org/licenses/agpl-3.0.html"))
-		tui.Fprintf(buf, "Copyright  %-22s %s\n", fmt.Sprintf("2015-%d MinIO Inc.", time.Now().Year()), faint.Render("https://min.io"))
+		fmt.Fprintf(buf, "Version    %-22s %s\n", info.Version, faint.Render("commit="+info.CommitID))
+		fmt.Fprintf(buf, "Runtime    %-22s %s\n", fmt.Sprintf("%s %s/%s", info.Runtime, runtime.GOOS, runtime.GOARCH), faint.Render("compiler="+info.Compiler))
+		fmt.Fprintf(buf, "License    %-22s %s\n", "AGPLv3", faint.Render("https://www.gnu.org/licenses/agpl-3.0.html"))
+		fmt.Fprintf(buf, "Copyright  %-22s %s\n", fmt.Sprintf("2015-%d MinIO Inc.", time.Now().Year()), faint.Render("https://min.io"))
 		tui.Print(buf.String())
 		return
 	}

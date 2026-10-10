@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -46,17 +47,9 @@ func Connect(ctx context.Context, c *Config) (*Store, error) {
 	if c.Engine == "" {
 		c.Engine = EngineKV
 	}
-	if c.APIVersion == "" {
-		c.APIVersion = APIv1
-	}
 	if c.AppRole != nil {
 		if c.AppRole.Engine == "" {
 			c.AppRole.Engine = EngineAppRole
-		}
-	}
-	if c.K8S != nil {
-		if c.K8S.Engine == "" {
-			c.K8S.Engine = EngineKubernetes
 		}
 	}
 	if c.Transit != nil {
@@ -68,19 +61,14 @@ func Connect(ctx context.Context, c *Config) (*Store, error) {
 		c.StatusPingAfter = 15 * time.Second
 	}
 
-	if c.Endpoint == "" {
-		return nil, fmt.Errorf("vault: endpoint is empty")
+	if u, err := url.Parse(c.Endpoint); err != nil || u.Scheme != "https" || u.Host == "" {
+		return nil, fmt.Errorf("vault: endpoint '%s' is not an https:// URL", c.Endpoint)
 	}
-	if c.APIVersion != APIv1 && c.APIVersion != APIv2 {
-		return nil, fmt.Errorf("vault: invalid engine API version '%s'", c.APIVersion)
+	if c.APIVersion != APIv2 {
+		return nil, fmt.Errorf("vault: K/V engine API version must be '%s'", APIv2)
 	}
-	if c.AppRole != nil && c.K8S != nil {
-		if (c.AppRole.ID == "" || c.AppRole.Secret == "") && (c.K8S.JWT == "" || c.K8S.Role == "") {
-			return nil, errors.New("vault: no authentication method specified")
-		}
-		if (c.AppRole.ID != "" || c.AppRole.Secret != "") && (c.K8S.JWT != "" || c.K8S.Role != "") {
-			return nil, errors.New("vault: more than one authentication method specified: approle and kubernetes configuration is present")
-		}
+	if c.AppRole == nil || c.AppRole.ID == "" || c.AppRole.Secret == "" {
+		return nil, errors.New("vault: AppRole ID and secret are required")
 	}
 	if c.Transit != nil {
 		if c.Transit.KeyName == "" {
@@ -107,13 +95,7 @@ func Connect(ctx context.Context, c *Config) (*Store, error) {
 		client.SetNamespace(c.Namespace)
 	}
 
-	var authenticate authFunc
-	switch {
-	case c.AppRole != nil && (c.AppRole.ID != "" || c.AppRole.Secret != ""):
-		authenticate = client.AuthenticateWithAppRole(c.AppRole)
-	case c.K8S != nil && (c.K8S.Role != "" || c.K8S.JWT != ""):
-		authenticate = client.AuthenticateWithK8S(c.K8S)
-	}
+	authenticate := client.AuthenticateWithAppRole(c.AppRole)
 
 	auth, err := authenticate(ctx)
 	if err != nil {

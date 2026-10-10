@@ -129,7 +129,7 @@ func lsPolicyCmd(args []string) {
 		style = tui.NewStyle().Underline(cli.IsTerminal())
 		buf   = &strings.Builder{}
 	)
-	tui.Fprintln(buf, style.Render("Key"))
+	fmt.Fprintln(buf, style.Render("Key"))
 	for _, name := range names {
 		buf.WriteString(name)
 		buf.WriteByte('\n')

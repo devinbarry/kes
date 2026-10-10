@@ -383,10 +383,6 @@ type VaultKeyStore struct {
 	// method credentials.
 	AppRole *VaultAppRoleAuth
 
-	// Kubernetes contains the Vault Kubernetes authentication
-	// method credentials.
-	Kubernetes *VaultKubernetesAuth
-
 	// Transit contains the Vault transit encryption engine
 	// configuration for en/decrypting K/V entries with a
 	// key managed by Vault.
@@ -453,36 +449,6 @@ type VaultAppRoleAuth struct {
 	Secret string
 }
 
-// VaultKubernetesAuth is a structure containing the configuration
-// for the Hashicorp Vault Kubernetes authentication method.
-type VaultKubernetesAuth struct {
-	// Engine is the Kubernetes authentication engine path.
-	// If empty, defaults to "kubernetes".
-	Engine string
-
-	// Namespace is the Vault namespace in which the Kubernetes
-	// authentication is performed. It can be used to authenticate
-	// in a different namespace compared to the secret engine
-	// namespace. For example, authenticate within the root
-	// namespace but use a team-specific namespace for the secret
-	// engine.
-	//
-	// If empty, the VaultKeyStore namespace is used, if set.
-	// A single "/" is treated as alias for the Vault root
-	// namespace such that no namespace header is sent as part
-	// of the request.
-	Namespace string
-
-	// KubernetesRole is the login role for authenticating via the
-	// kubernetes authentication method.
-	Role string
-
-	// KubernetesJWT is either the JWT or a path to a file containing
-	// the JWT for for authenticating via the kubernetes authentication
-	// method.
-	JWT string
-}
-
 // VaultTransit is a structure containing the configuration
 // for the Hashicorp Vault transit encryption engine.
 type VaultTransit struct {
@@ -496,11 +462,8 @@ type VaultTransit struct {
 
 // Connect returns a kv.Store that stores key-value pairs on a Hashicorp Vault server.
 func (s *VaultKeyStore) Connect(ctx context.Context) (kes.KeyStore, error) {
-	if s.AppRole == nil && s.Kubernetes == nil {
-		return nil, errors.New("edge: failed to connect to hashicorp vault: no authentication method specified")
-	}
-	if s.AppRole != nil && s.Kubernetes != nil {
-		return nil, errors.New("edge: failed to connect to hashicorp vault: more than one authentication method specified")
+	if s.AppRole == nil {
+		return nil, errors.New("kesconf: failed to connect to hashicorp vault: no approle authentication specified")
 	}
 	c := &vault.Config{
 		Endpoint:        s.Endpoint,
@@ -519,14 +482,6 @@ func (s *VaultKeyStore) Connect(ctx context.Context) (kes.KeyStore, error) {
 			Namespace: s.AppRole.Namespace,
 			ID:        s.AppRole.ID,
 			Secret:    s.AppRole.Secret,
-		}
-	}
-	if s.Kubernetes != nil {
-		c.K8S = &vault.Kubernetes{
-			Engine:    s.Kubernetes.Engine,
-			Namespace: s.Kubernetes.Namespace,
-			Role:      s.Kubernetes.Role,
-			JWT:       s.Kubernetes.JWT,
 		}
 	}
 	if s.Transit != nil {
