@@ -229,9 +229,6 @@ func initRoutes(s *Server, routeConfig map[string]RouteConfig, metrics *metric.M
 		if !ok {
 			continue
 		}
-		if conf.InsecureSkipAuth {
-			route.Auth = insecureIdentifyOnly{}
-		}
 		if conf.Timeout > 0 {
 			route.Timeout = conf.Timeout
 		}

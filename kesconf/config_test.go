@@ -9,66 +9,14 @@ import (
 	"time"
 )
 
-func TestReadServerConfigYAML_FS(t *testing.T) {
-	const (
-		Filename = "./testdata/fs.yml"
-		FSPath   = "/tmp/keys"
-	)
-
-	config, err := ReadFile(Filename)
-	if err != nil {
-		t.Fatalf("Failed to read file '%s': %v", Filename, err)
-	}
-
-	fs, ok := config.KeyStore.(*FSKeyStore)
-	if !ok {
-		var want *FSKeyStore
-		t.Fatalf("Invalid keystore: got type '%T' - want type '%T'", config.KeyStore, want)
-	}
-	if fs.Path != FSPath {
-		t.Fatalf("Invalid keystore: got path '%s' - want path '%s'", fs.Path, FSPath)
-	}
-}
-
-func TestReadServerConfigYAML_EncryptedFS(t *testing.T) {
-	const (
-		Filename        = "./testdata/efs.yml"
-		MasterKeyPath   = "./kes-master-key"
-		MasterKeyCipher = "master-key-cipher"
-		FSPath          = "/tmp/keys"
-	)
-
-	config, err := ReadFile(Filename)
-	if err != nil {
-		t.Fatalf("Failed to read file '%s': %v", Filename, err)
-	}
-
-	fs, ok := config.KeyStore.(*EncryptedFSKeyStore)
-	if !ok {
-		var want *EncryptedFSKeyStore
-		t.Fatalf("Invalid keystore: got type '%T' - want type '%T'", config.KeyStore, want)
-	}
-	if fs.MasterKeyPath != MasterKeyPath {
-		t.Fatalf("Invalid keystore: got master key path '%s' - want path '%s'", fs.MasterKeyPath, MasterKeyPath)
-	}
-	if fs.MasterKeyCipher != MasterKeyCipher {
-		t.Fatalf("Invalid keystore: got master key cipher '%s' - want cipher '%s'", fs.MasterKeyCipher, MasterKeyCipher)
-	}
-	if fs.Path != FSPath {
-		t.Fatalf("Invalid keystore: got path '%s' - want path '%s'", fs.Path, FSPath)
-	}
-}
-
 func TestReadServerConfigYAML_CustomAPI(t *testing.T) {
 	const (
 		Filename = "./testdata/custom-api.yml"
 
-		StatusPath      = "/v1/status"
-		StatusTimeout   = 17 * time.Second
-		StatusSkipAuth  = true
-		MetricsPath     = "/v1/metrics"
-		MetricsTimeout  = 22 * time.Second
-		MetricsSkipAuth = true
+		StatusPath     = "/v1/status"
+		StatusTimeout  = 17 * time.Second
+		MetricsPath    = "/v1/metrics"
+		MetricsTimeout = 22 * time.Second
 	)
 
 	config, err := ReadFile(Filename)
@@ -83,9 +31,6 @@ func TestReadServerConfigYAML_CustomAPI(t *testing.T) {
 	if api.Timeout != StatusTimeout {
 		t.Fatalf("Invalid API config: invalid timeout for '%s': got '%v' - want '%v'", StatusPath, api.Timeout, StatusTimeout)
 	}
-	if api.InsecureSkipAuth != StatusSkipAuth {
-		t.Fatalf("Invalid API config: invalid skip_auth for '%s': got '%v' - want '%v'", StatusPath, api.InsecureSkipAuth, StatusSkipAuth)
-	}
 
 	api, ok = config.API.Paths[MetricsPath]
 	if !ok {
@@ -93,9 +38,6 @@ func TestReadServerConfigYAML_CustomAPI(t *testing.T) {
 	}
 	if api.Timeout != MetricsTimeout {
 		t.Fatalf("Invalid API config: invalid timeout for '%s': got '%v' - want '%v'", StatusPath, api.Timeout, MetricsTimeout)
-	}
-	if api.InsecureSkipAuth != MetricsSkipAuth {
-		t.Fatalf("Invalid API config: invalid skip_auth for '%s': got '%v' - want '%v'", StatusPath, api.InsecureSkipAuth, MetricsSkipAuth)
 	}
 }
 
@@ -237,80 +179,5 @@ func TestReadServerConfigYAML_VaultWithK8S_JWTFile(t *testing.T) {
 	}
 	if vault.Kubernetes.Role != K8SRole {
 		t.Fatalf("Invalid K8S role: got '%s' - want'%s'", vault.Kubernetes.Role, K8SRole)
-	}
-}
-
-func TestReadServerConfigYAML_AWS(t *testing.T) {
-	const (
-		Filename = "./testdata/aws.yml"
-
-		Endpoint  = "secretsmanager.us-east-2.amazonaws.com"
-		Region    = "us-east-2"
-		AccessKey = "AKIAIOSFODNN7EXAMPLE"
-		Secretkey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-	)
-
-	config, err := ReadFile(Filename)
-	if err != nil {
-		t.Fatalf("Failed to read file '%s': %v", Filename, err)
-	}
-
-	aws, ok := config.KeyStore.(*AWSSecretsManagerKeyStore)
-	if !ok {
-		var want *AWSSecretsManagerKeyStore
-		t.Fatalf("Invalid keystore: got type '%T' - want type '%T'", config.KeyStore, want)
-	}
-	if aws.Endpoint != Endpoint {
-		t.Fatalf("Invalid endpoint: got '%s' - want '%s'", aws.Endpoint, Endpoint)
-	}
-	if aws.Region != Region {
-		t.Fatalf("Invalid region: got '%s' - want '%s'", aws.Region, Region)
-	}
-	if aws.AccessKey != AccessKey {
-		t.Fatalf("Invalid access key: got '%s' - want '%s'", aws.AccessKey, AccessKey)
-	}
-	if aws.SecretKey != Secretkey {
-		t.Fatalf("Invalid secret key: got '%s' - want '%s'", aws.SecretKey, Secretkey)
-	}
-}
-
-func TestReadServerConfigYAML_AWS_NoCredentials(t *testing.T) {
-	// The AWS SDK will look for access credentials from the env.
-	// when no credentials are specified in the config.
-
-	const (
-		Filename = "./testdata/aws-no-credentials.yml"
-
-		Endpoint     = "secretsmanager.us-east-2.amazonaws.com"
-		Region       = "us-east-2"
-		AccessKey    = ""
-		Secretkey    = ""
-		SessionToken = ""
-	)
-
-	config, err := ReadFile(Filename)
-	if err != nil {
-		t.Fatalf("Failed to read file '%s': %v", Filename, err)
-	}
-
-	aws, ok := config.KeyStore.(*AWSSecretsManagerKeyStore)
-	if !ok {
-		var want *AWSSecretsManagerKeyStore
-		t.Fatalf("Invalid keystore: got type '%T' - want type '%T'", config.KeyStore, want)
-	}
-	if aws.Endpoint != Endpoint {
-		t.Fatalf("Invalid endpoint: got '%s' - want '%s'", aws.Endpoint, Endpoint)
-	}
-	if aws.Region != Region {
-		t.Fatalf("Invalid region: got '%s' - want '%s'", aws.Region, Region)
-	}
-	if aws.AccessKey != AccessKey {
-		t.Fatalf("Invalid access key: got '%s' - want '%s'", aws.AccessKey, AccessKey)
-	}
-	if aws.SecretKey != Secretkey {
-		t.Fatalf("Invalid secret key: got '%s' - want '%s'", aws.SecretKey, Secretkey)
-	}
-	if aws.SessionToken != SessionToken {
-		t.Fatalf("Invalid secret key: got '%s' - want '%s'", aws.SessionToken, SessionToken)
 	}
 }

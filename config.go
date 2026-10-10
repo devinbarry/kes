@@ -123,22 +123,6 @@ type RouteConfig struct {
 	// hung or allow certain types of denial-of-service (DOS)
 	// attacks.
 	Timeout time.Duration
-
-	// InsecureSkipAuth, if set, disables authentication for the
-	// API route. It allows anyone that can send HTTPS requests
-	// to the KES server to invoke the API.
-	//
-	// For example the KES readiness API authentication may be
-	// disabled when the probing clients do not support mTLS
-	// client authentication
-	//
-	// If setting InsecureSkipAuth for any API then clients that
-	// do not send a client certificate during the TLS handshake
-	// no longer encounter a TLS handshake error but receive a
-	// HTTP error instead. In particular, when the server's TLS
-	// client auth type has been set  tls.RequireAnyClientCert
-	// or tls.RequireAndVerifyClientCert.
-	InsecureSkipAuth bool
 }
 
 // verifyConfig reports whether the c is a valid Config

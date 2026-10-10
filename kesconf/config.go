@@ -58,8 +58,7 @@ type ymlFile struct {
 
 	API struct {
 		Paths map[string]struct {
-			InsecureSkipAuth env[bool]          `yaml:"skip_auth"`
-			Timeout          env[time.Duration] `yaml:"timeout"`
+			Timeout env[time.Duration] `yaml:"timeout"`
 		} `yaml:",inline"`
 	} `yaml:"api"`
 
@@ -73,24 +72,6 @@ type ymlFile struct {
 	} `yaml:"keys"`
 
 	KeyStore struct {
-		FS *struct {
-			Path env[string] `yaml:"path"`
-		}
-		EncryptedFS *struct {
-			MasterKeyPath   env[string] `yaml:"masterKeyPath"`
-			MasterKeyCipher env[string] `yaml:"masterKeyCipher"`
-			Path            env[string] `yaml:"path"`
-		} `yaml:"encryptedfs"`
-		KES *struct {
-			Endpoint []env[string] `yaml:"endpoint"`
-			Enclave  env[string]   `yaml:"enclave"`
-			TLS      struct {
-				Certificate env[string] `yaml:"cert"`
-				PrivateKey  env[string] `yaml:"key"`
-				CAPath      env[string] `yaml:"ca"`
-			} `yaml:"tls"`
-		} `yaml:"kes"`
-
 		Vault *struct {
 			Endpoint   env[string] `yaml:"endpoint"`
 			Engine     env[string] `yaml:"engine"`
@@ -127,92 +108,6 @@ type ymlFile struct {
 				Ping env[time.Duration] `yaml:"ping"`
 			} `yaml:"status"`
 		} `yaml:"vault"`
-
-		Fortanix *struct {
-			SDKMS *struct {
-				Endpoint env[string] `yaml:"endpoint"`
-				GroupID  env[string] `yaml:"group_id"`
-
-				Login struct {
-					APIKey env[string] `yaml:"key"`
-				} `yaml:"credentials"`
-
-				TLS struct {
-					CAPath env[string] `yaml:"ca"`
-				} `yaml:"tls"`
-			} `yaml:"sdkms"`
-		} `yaml:"fortanix"`
-
-		Gemalto *struct {
-			KeySecure *struct {
-				Endpoint env[string] `yaml:"endpoint"`
-
-				Login struct {
-					Token  env[string] `yaml:"token"`
-					Domain env[string] `yaml:"domain"`
-				} `yaml:"credentials"`
-
-				TLS struct {
-					CAPath env[string] `yaml:"ca"`
-				} `yaml:"tls"`
-			} `yaml:"keysecure"`
-		} `yaml:"gemalto"`
-
-		GCP *struct {
-			SecretManager *struct {
-				ProjectID   env[string]   `yaml:"project_id"`
-				Endpoint    env[string]   `yaml:"endpoint"`
-				Scopes      []env[string] `yaml:"scopes"`
-				Credentials struct {
-					Client   env[string] `yaml:"client_email"`
-					ClientID env[string] `yaml:"client_id"`
-					KeyID    env[string] `yaml:"private_key_id"`
-					Key      env[string] `yaml:"private_key"`
-				} `yaml:"credentials"`
-			} `yaml:"secretmanager"`
-		} `yaml:"gcp"`
-
-		AWS *struct {
-			SecretsManager *struct {
-				Endpoint env[string] `yaml:"endpoint"`
-				Region   env[string] `yaml:"region"`
-				KmsKey   env[string] ` yaml:"kmskey"`
-
-				Login struct {
-					AccessKey    env[string] `yaml:"accesskey"`
-					SecretKey    env[string] `yaml:"secretkey"`
-					SessionToken env[string] `yaml:"token"`
-				} `yaml:"credentials"`
-			} `yaml:"secretsmanager"`
-		} `yaml:"aws"`
-
-		Azure *struct {
-			KeyVault *struct {
-				Endpoint    env[string] `yaml:"endpoint"`
-				Credentials *struct {
-					TenantID env[string] `yaml:"tenant_id"`
-					ClientID env[string] `yaml:"client_id"`
-					Secret   env[string] `yaml:"client_secret"`
-				} `yaml:"credentials"`
-				ManagedIdentity *struct {
-					ClientID env[string] `yaml:"client_id"`
-				} `yaml:"managed_identity"`
-			} `yaml:"keyvault"`
-		} `yaml:"azure"`
-		Entrust *struct {
-			KeyControl *struct {
-				Endpoint env[string] `yaml:"endpoint"`
-				VaultID  env[string] `yaml:"vault_id"`
-				BoxID    env[string] `yaml:"box_id"`
-				Login    *struct {
-					Username env[string] `yaml:"username"`
-					Password env[string] `yaml:"password"`
-				} `yaml:"credentials"`
-				TLS struct {
-					CAPath env[string] `yaml:"ca"`
-				} `yaml:"tls"`
-			} `yaml:"keycontrol"`
-		} `yaml:"entrust"`
 	} `yaml:"keystore"`
 }
 
@@ -309,20 +204,6 @@ func ymlToServerConfig(y *ymlFile) (*File, error) {
 		if api.Timeout.Value < 0 {
 			return nil, fmt.Errorf("kesconf: invalid timeout '%d' for API '%s'", api.Timeout.Value, path)
 		}
-
-		// If mTLS authentication is disabled for at least one API,
-		// we must no longer require that a client sends a certificate.
-		// However, this may cause authentication errors when a client
-		// (the client's HTTP/TLS stack) does not send a certificate
-		// for an API that requires authentication.
-		if api.InsecureSkipAuth.Value {
-			if clientAuth == tls.RequireAnyClientCert {
-				clientAuth = tls.RequestClientCert
-			}
-			if clientAuth == tls.RequireAndVerifyClientCert {
-				clientAuth = tls.VerifyClientCertIfGiven
-			}
-		}
 	}
 
 	if len(y.Keys) > 0 {
@@ -386,8 +267,7 @@ func ymlToServerConfig(y *ymlFile) (*File, error) {
 		paths := make(map[string]APIPathConfig, len(y.API.Paths))
 		for path, api := range y.API.Paths {
 			paths[path] = APIPathConfig{
-				InsecureSkipAuth: api.InsecureSkipAuth.Value,
-				Timeout:          api.Timeout.Value,
+				Timeout: api.Timeout.Value,
 			}
 		}
 		c.API = &APIConfig{
@@ -410,38 +290,6 @@ func ymlToServerConfig(y *ymlFile) (*File, error) {
 
 func ymlToKeyStore(y *ymlFile) (KeyStore, error) {
 	var keystore KeyStore
-
-	// FS Keystore
-	if y.KeyStore.FS != nil {
-		if y.KeyStore.FS.Path.Value == "" {
-			return nil, errors.New("kesconf: invalid fs keystore: no path specified")
-		}
-		keystore = &FSKeyStore{
-			Path: y.KeyStore.FS.Path.Value,
-		}
-	}
-
-	// Encrypted FS Keystore
-	if y.KeyStore.EncryptedFS != nil {
-		// Ensure only one keystore type is configured
-		if keystore != nil {
-			return nil, errors.New("kesconf: invalid keystore config: more than once keystore specified")
-		}
-		if y.KeyStore.EncryptedFS.MasterKeyPath.Value == "" {
-			return nil, errors.New("kesconf: invalid encryptedfs keystore: no master key path specified")
-		}
-		if y.KeyStore.EncryptedFS.MasterKeyCipher.Value == "" {
-			return nil, errors.New("kesconf: invalid encryptedfs keystore: no master key cipher specified")
-		}
-		if y.KeyStore.EncryptedFS.Path.Value == "" {
-			return nil, errors.New("kesconf: invalid encryptedfs keystore: no path specified")
-		}
-		keystore = &EncryptedFSKeyStore{
-			MasterKeyPath:   y.KeyStore.EncryptedFS.MasterKeyPath.Value,
-			MasterKeyCipher: y.KeyStore.EncryptedFS.MasterKeyCipher.Value,
-			Path:            y.KeyStore.EncryptedFS.Path.Value,
-		}
-	}
 
 	// Hashicorp Vault Keystore
 	if y.KeyStore.Vault != nil {
@@ -527,160 +375,6 @@ func ymlToKeyStore(y *ymlFile) (KeyStore, error) {
 			}
 		}
 		keystore = s
-	}
-
-	// Fortanix SDKMS
-	if y.KeyStore.Fortanix != nil && y.KeyStore.Fortanix.SDKMS != nil {
-		if keystore != nil {
-			return nil, errors.New("kesconf: invalid keystore config: more than once keystore specified")
-		}
-		if y.KeyStore.Fortanix.SDKMS.Endpoint.Value == "" {
-			return nil, errors.New("kesconf: invalid fortanix SDKMS keystore: no endpoint specified")
-		}
-		if y.KeyStore.Fortanix.SDKMS.Login.APIKey.Value == "" {
-			return nil, errors.New("kesconf: invalid fortanix SDKMS keystore: no API key specified")
-		}
-		keystore = &FortanixKeyStore{
-			Endpoint: y.KeyStore.Fortanix.SDKMS.Endpoint.Value,
-			GroupID:  y.KeyStore.Fortanix.SDKMS.GroupID.Value,
-			APIKey:   y.KeyStore.Fortanix.SDKMS.Login.APIKey.Value,
-			CAPath:   y.KeyStore.Fortanix.SDKMS.TLS.CAPath.Value,
-		}
-	}
-
-	// Thales CipherTrust / Gemalto KeySecure
-	if y.KeyStore.Gemalto != nil && y.KeyStore.Gemalto.KeySecure != nil {
-		if keystore != nil {
-			return nil, errors.New("kesconf: invalid keystore config: more than once keystore specified")
-		}
-		if y.KeyStore.Gemalto.KeySecure.Endpoint.Value == "" {
-			return nil, errors.New("kesconf: invalid gemalto keysecure keystore: no endpoint specified")
-		}
-		if y.KeyStore.Gemalto.KeySecure.Login.Token.Value == "" {
-			return nil, errors.New("kesconf: invalid gemalto keysecure keystore: no token specified")
-		}
-		keystore = &KeySecureKeyStore{
-			Endpoint: y.KeyStore.Gemalto.KeySecure.Endpoint.Value,
-			Token:    y.KeyStore.Gemalto.KeySecure.Login.Token.Value,
-			Domain:   y.KeyStore.Gemalto.KeySecure.Login.Domain.Value,
-			CAPath:   y.KeyStore.Gemalto.KeySecure.TLS.CAPath.Value,
-		}
-	}
-
-	// GCP SecretManager
-	if y.KeyStore.GCP != nil && y.KeyStore.GCP.SecretManager != nil {
-		if keystore != nil {
-			return nil, errors.New("kesconf: invalid keystore config: more than once keystore specified")
-		}
-		if y.KeyStore.GCP.SecretManager.ProjectID.Value == "" {
-			return nil, errors.New("kesconf: invalid GCP secretmanager keystore: no project ID specified")
-		}
-		var scopes []string
-		if len(y.KeyStore.GCP.SecretManager.Scopes) > 0 {
-			scopes = make([]string, 0, len(scopes))
-			for _, scope := range y.KeyStore.GCP.SecretManager.Scopes {
-				scopes = append(scopes, scope.Value)
-			}
-		}
-		keystore = &GCPSecretManagerKeyStore{
-			ProjectID:   y.KeyStore.GCP.SecretManager.ProjectID.Value,
-			Endpoint:    y.KeyStore.GCP.SecretManager.Endpoint.Value,
-			ClientEmail: y.KeyStore.GCP.SecretManager.Credentials.Client.Value,
-			ClientID:    y.KeyStore.GCP.SecretManager.Credentials.ClientID.Value,
-			KeyID:       y.KeyStore.GCP.SecretManager.Credentials.KeyID.Value,
-			Key:         y.KeyStore.GCP.SecretManager.Credentials.Key.Value,
-			Scopes:      scopes,
-		}
-	}
-
-	// AWS SecretsManager
-	if y.KeyStore.AWS != nil && y.KeyStore.AWS.SecretsManager != nil {
-		if keystore != nil {
-			return nil, errors.New("kesconf: invalid keystore config: more than once keystore specified")
-		}
-		if y.KeyStore.AWS.SecretsManager.Endpoint.Value == "" {
-			return nil, errors.New("kesconf: invalid AWS secretsmanager keystore: no endpoint specified")
-		}
-		if y.KeyStore.AWS.SecretsManager.Region.Value == "" {
-			return nil, errors.New("kesconf: invalid AWS secretsmanager keystore: no region specified")
-		}
-		keystore = &AWSSecretsManagerKeyStore{
-			Endpoint:     y.KeyStore.AWS.SecretsManager.Endpoint.Value,
-			Region:       y.KeyStore.AWS.SecretsManager.Region.Value,
-			KMSKey:       y.KeyStore.AWS.SecretsManager.KmsKey.Value,
-			AccessKey:    y.KeyStore.AWS.SecretsManager.Login.AccessKey.Value,
-			SecretKey:    y.KeyStore.AWS.SecretsManager.Login.SecretKey.Value,
-			SessionToken: y.KeyStore.AWS.SecretsManager.Login.SessionToken.Value,
-		}
-	}
-
-	// Azure KeyVault
-	if y.KeyStore.Azure != nil && y.KeyStore.Azure.KeyVault != nil {
-		if keystore != nil {
-			return nil, errors.New("kesconf: invalid keystore config: more than once keystore specified")
-		}
-		if y.KeyStore.Azure.KeyVault.Endpoint.Value == "" {
-			return nil, errors.New("kesconf: invalid Azure keyvault keystore: no endpoint specified")
-		}
-		if y.KeyStore.Azure.KeyVault.Credentials != nil && y.KeyStore.Azure.KeyVault.ManagedIdentity != nil {
-			return nil, errors.New("kesconf: invalid Azure keyvault keystore: more than one authentication method specified")
-		}
-		if y.KeyStore.Azure.KeyVault.Credentials != nil {
-			if y.KeyStore.Azure.KeyVault.Credentials.TenantID.Value == "" {
-				return nil, errors.New("kesconf: invalid Azure keyvault keystore: no tenant ID specified")
-			}
-			if y.KeyStore.Azure.KeyVault.Credentials.ClientID.Value == "" {
-				return nil, errors.New("kesconf: invalid Azure keyvault keystore: no client ID specified")
-			}
-			if y.KeyStore.Azure.KeyVault.Credentials.Secret.Value == "" {
-				return nil, errors.New("kesconf: invalid Azure keyvault keystore: no client secret specified")
-			}
-		}
-		if y.KeyStore.Azure.KeyVault.ManagedIdentity != nil {
-			if y.KeyStore.Azure.KeyVault.ManagedIdentity.ClientID.Value == "" {
-				return nil, errors.New("kesconf: invalid Azure keyvault keystore: no client ID specified")
-			}
-		}
-		s := &AzureKeyVaultKeyStore{
-			Endpoint: y.KeyStore.Azure.KeyVault.Endpoint.Value,
-		}
-		if y.KeyStore.Azure.KeyVault.Credentials != nil {
-			s.TenantID = y.KeyStore.Azure.KeyVault.Credentials.TenantID.Value
-			s.ClientID = y.KeyStore.Azure.KeyVault.Credentials.ClientID.Value
-			s.ClientSecret = y.KeyStore.Azure.KeyVault.Credentials.Secret.Value
-		}
-		if y.KeyStore.Azure.KeyVault.ManagedIdentity != nil {
-			s.ManagedIdentityClientID = y.KeyStore.Azure.KeyVault.ManagedIdentity.ClientID.Value
-		}
-		keystore = s
-	}
-	if y.KeyStore.Entrust != nil && y.KeyStore.Entrust.KeyControl != nil {
-		if keystore != nil {
-			return nil, errors.New("kesconf: invalid keystore config: more than once keystore specified")
-		}
-		if y.KeyStore.Entrust.KeyControl.Endpoint.Value == "" {
-			return nil, errors.New("kesconf: invalid Entrust KeyControl keystore: no endpoint specified")
-		}
-		if y.KeyStore.Entrust.KeyControl.VaultID.Value == "" {
-			return nil, errors.New("kesconf: invalid Entrust KeyControl keystore: no vault ID specified")
-		}
-		if y.KeyStore.Entrust.KeyControl.BoxID.Value == "" {
-			return nil, errors.New("kesconf: invalid Entrust KeyControl keystore: no box ID specified")
-		}
-		if y.KeyStore.Entrust.KeyControl.Login.Username.Value == "" {
-			return nil, errors.New("kesconf: invalid Entrust KeyControl keystore: no username specified")
-		}
-		if y.KeyStore.Entrust.KeyControl.Login.Password.Value == "" {
-			return nil, errors.New("kesconf: invalid Entrust KeyControl keystore: no password specified")
-		}
-		keystore = &EntrustKeyControlKeyStore{
-			Endpoint: y.KeyStore.Entrust.KeyControl.Endpoint.Value,
-			VaultID:  y.KeyStore.Entrust.KeyControl.VaultID.Value,
-			BoxID:    y.KeyStore.Entrust.KeyControl.BoxID.Value,
-			Username: y.KeyStore.Entrust.KeyControl.Login.Username.Value,
-			Password: y.KeyStore.Entrust.KeyControl.Login.Password.Value,
-			CAPath:   y.KeyStore.Entrust.KeyControl.TLS.CAPath.Value,
-		}
 	}
 
 	if keystore == nil {

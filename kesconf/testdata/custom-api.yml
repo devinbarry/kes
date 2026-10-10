@@ -16,11 +16,12 @@ cache:
 api:
   /v1/status:
     timeout: 17s
-    skip_auth: true    
   /v1/metrics:
     timeout: 22s
-    skip_auth: true
 
 keystore:
-  fs:
-    path: /tmp/kes
+  vault:
+    endpoint: https://127.0.0.1:8200
+    approle:
+      id:     db02de05-fa39-4855-059b-67221c5c2f63
+      secret: 6a174c20-f6de-a53c-74d2-6018fcceff64

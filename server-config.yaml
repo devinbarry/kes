@@ -97,7 +97,6 @@ tls:
 #
 api:
   /v1/ready:
-    skip_auth: false
     timeout:   15s
 
 # The (pre-defined) policy definitions.

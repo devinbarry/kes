@@ -16,18 +16,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/minio/kes"
 	"github.com/minio/kes/internal/https"
-	"github.com/minio/kes/internal/keystore/aws"
-	"github.com/minio/kes/internal/keystore/azure"
-	"github.com/minio/kes/internal/keystore/efs"
-	"github.com/minio/kes/internal/keystore/entrust"
-	"github.com/minio/kes/internal/keystore/fortanix"
-	"github.com/minio/kes/internal/keystore/fs"
-	"github.com/minio/kes/internal/keystore/gcp"
-	"github.com/minio/kes/internal/keystore/gemalto"
 	"github.com/minio/kes/internal/keystore/vault"
 	kesdk "github.com/minio/kms-go/kes"
 	yaml "gopkg.in/yaml.v3"
@@ -185,8 +175,7 @@ func (f *File) Config(ctx context.Context) (*kes.Config, error) {
 		conf.Routes = make(map[string]kes.RouteConfig, len(f.API.Paths))
 		for path, config := range f.API.Paths {
 			conf.Routes[path] = kes.RouteConfig{
-				Timeout:          config.Timeout,
-				InsecureSkipAuth: config.InsecureSkipAuth,
+				Timeout: config.Timeout,
 			}
 		}
 	}
@@ -324,16 +313,6 @@ type APIPathConfig struct {
 	// with a HTTP timeout error response. If Timeout is
 	// zero the API default is used.
 	Timeout time.Duration
-
-	// InsecureSkipAuth controls whether the API verifies
-	// client identities. If InsecureSkipAuth is true,
-	// the API accepts requests from arbitrary identities.
-	// In this mode, the API can be used by anyone who can
-	// communicate to the KES server over HTTPS.
-	// This should only be set for testing or in certain
-	// cases for APIs that don't expose sensitive information,
-	// like metrics.
-	InsecureSkipAuth bool
 }
 
 // Policy is a structure defining a KES policy.
@@ -375,46 +354,6 @@ type KeyStore interface {
 	// Connect establishes and returns a new connection
 	// to the keystore.
 	Connect(ctx context.Context) (kes.KeyStore, error)
-}
-
-// FSKeyStore is a structure containing the configuration
-// for a simple filesystem keystore.
-//
-// A FSKeyStore should only be used when testing a KES server.
-type FSKeyStore struct {
-	// Path is the path to the directory that
-	// contains the keys.
-	//
-	// If the directory does not exist, it
-	// will be created.
-	Path string
-}
-
-// Connect returns a kv.Store that stores key-value pairs in a path on the filesystem.
-func (s *FSKeyStore) Connect(context.Context) (kes.KeyStore, error) {
-	return fs.NewStore(s.Path)
-}
-
-// EncryptedFSKeyStore is a structure containing the configuration
-// for a simple filesystem keystore.
-//
-// An EncryptedFSKeyStore should only be used when testing a KES server.
-type EncryptedFSKeyStore struct {
-	// MasterKeyPath is the path of the file containing the master key.
-	MasterKeyPath string
-	// MasterKeyCipher is the cipher to load the master key.
-	MasterKeyCipher string
-	// Path is the path to the directory that
-	// contains the keys.
-	//
-	// If the directory does not exist, it
-	// will be created.
-	Path string
-}
-
-// Connect returns a kes.KeyStore that stores encrypted key-value pairs in a path on the filesystem.
-func (s *EncryptedFSKeyStore) Connect(context.Context) (kes.KeyStore, error) {
-	return efs.NewStore(s.MasterKeyPath, s.MasterKeyCipher, s.Path)
 }
 
 // VaultKeyStore is a structure containing the configuration
@@ -600,263 +539,4 @@ func (s *VaultKeyStore) Connect(ctx context.Context) (kes.KeyStore, error) {
 		}
 	}
 	return vault.Connect(ctx, c)
-}
-
-// FortanixKeyStore is a structure containing the
-// configuration for Fortanix SDKMS.
-type FortanixKeyStore struct {
-	// Endpoint is the endpoint of the Fortanix KMS.
-	Endpoint string
-
-	// GroupID is the ID of the access control group.
-	GroupID string
-
-	// APIKey is the API key for authenticating to
-	// the Fortanix KMS.
-	APIKey string
-
-	// CAPath is an optional path to the root
-	// CA certificate(s) for verifying the TLS
-	// certificate of the Hashicorp Vault server.
-	//
-	// If empty, the OS default root CA set is
-	// used.
-	CAPath string
-}
-
-// Connect returns a kv.Store that stores key-value pairs on a Fortanix SDKMS server.
-func (s *FortanixKeyStore) Connect(ctx context.Context) (kes.KeyStore, error) {
-	return fortanix.Connect(ctx, &fortanix.Config{
-		Endpoint: s.Endpoint,
-		GroupID:  s.GroupID,
-		APIKey:   fortanix.APIKey(s.APIKey),
-		CAPath:   s.CAPath,
-	})
-}
-
-// KeySecureKeyStore is a structure containing the
-// configuration for Gemalto KeySecure / Thales
-// CipherTrust Manager.
-type KeySecureKeyStore struct {
-	// Endpoint is the endpoint to the KeySecure server.
-	Endpoint string
-
-	// Token is the refresh authentication token to
-	// access the KeySecure server.
-	Token string
-
-	// Domain is the isolated namespace within the
-	// KeySecure server. If empty, defaults to the
-	// top-level / root domain.
-	Domain string
-
-	// CAPath is an optional path to the root
-	// CA certificate(s) for verifying the TLS
-	// certificate of the KeySecure server.
-	//
-	// If empty, the OS default root CA set is
-	// used.
-	CAPath string
-}
-
-// Connect returns a kv.Store that stores key-value pairs on a Gemalto KeySecure instance.
-func (s *KeySecureKeyStore) Connect(ctx context.Context) (kes.KeyStore, error) {
-	return gemalto.Connect(ctx, &gemalto.Config{
-		Endpoint: s.Endpoint,
-		CAPath:   s.CAPath,
-		Login: gemalto.Credentials{
-			Token:  s.Token,
-			Domain: s.Domain,
-		},
-	})
-}
-
-// GCPSecretManagerKeyStore is a structure containing the
-// configuration for GCP SecretManager.
-type GCPSecretManagerKeyStore struct {
-	// ProjectID is the GCP project ID.
-	ProjectID string
-
-	// Endpoint is the GCP project ID. If empty,
-	// defaults to:
-	//   secretmanager.googleapis.com:443
-	Endpoint string
-
-	// Scopes are GCP OAuth2 scopes for accessing
-	// GCP APIs. If empty, defaults to the GCP
-	// default scopes.
-	Scopes []string
-
-	// ClientEmail is the Client email of the
-	// GCP service account used to access the
-	// SecretManager.
-	ClientEmail string
-
-	// ClientID is the Client ID of the GCP
-	// service account used to access the
-	// SecretManager.
-	ClientID string
-
-	// KeyID is the private key ID of the GCP
-	// service account used to access the
-	// SecretManager.
-	KeyID string
-
-	// Key is the private key of the GCP
-	// service account used to access the
-	// SecretManager.
-	Key string
-}
-
-// Connect returns a kv.Store that stores key-value pairs on GCP SecretManager.
-func (s *GCPSecretManagerKeyStore) Connect(ctx context.Context) (kes.KeyStore, error) {
-	return gcp.Connect(ctx, &gcp.Config{
-		Endpoint:  s.Endpoint,
-		ProjectID: s.ProjectID,
-		Scopes:    s.Scopes,
-		Credentials: gcp.Credentials{
-			ClientID: s.ClientID,
-			Client:   s.ClientEmail,
-			KeyID:    s.KeyID,
-			Key:      s.Key,
-		},
-	})
-}
-
-// AWSSecretsManagerKeyStore is a structure containing the
-// configuration for AWS SecretsManager.
-type AWSSecretsManagerKeyStore struct {
-	// Endpoint is the AWS SecretsManager endpoint.
-	// AWS SecretsManager endpoints have the following
-	// schema:
-	//  secrestmanager[-fips].<region>.amanzonaws.com
-	Endpoint string
-
-	// Region is the AWS region the SecretsManager is
-	// located.
-	Region string
-
-	// KMSKey is the AWS-KMS key ID (CMK-ID) used to
-	// to en/decrypt secrets managed by the SecretsManager.
-	// If empty, the default AWS KMS key is used.
-	KMSKey string
-
-	// AccessKey is the access key for authenticating to AWS.
-	AccessKey string
-
-	// SecretKey is the secret key for authenticating to AWS.
-	SecretKey string
-
-	// SessionToken is an optional session token for authenticating
-	// to AWS.
-	SessionToken string
-}
-
-// Connect returns a kv.Store that stores key-value pairs on AWS SecretsManager.
-func (s *AWSSecretsManagerKeyStore) Connect(ctx context.Context) (kes.KeyStore, error) {
-	return aws.Connect(ctx, &aws.Config{
-		Addr:     s.Endpoint,
-		Region:   s.Region,
-		KMSKeyID: s.KMSKey,
-		Login: aws.Credentials{
-			AccessKey:    s.AccessKey,
-			SecretKey:    s.SecretKey,
-			SessionToken: s.SessionToken,
-		},
-	})
-}
-
-// AzureKeyVaultKeyStore is a structure containing the
-// configuration for Azure KeyVault.
-type AzureKeyVaultKeyStore struct {
-	// Endpoint is the Azure KeyVault endpoint.
-	Endpoint string
-
-	// TenantID is the ID of the Azure KeyVault tenant.
-	TenantID string
-
-	// ClientID is the ID of the client accessing
-	// Azure KeyVault.
-	ClientID string
-
-	// ClientSecret is the client secret accessing the
-	// Azure KeyVault.
-	ClientSecret string
-
-	// ManagedIdentityClientID is the client ID of the
-	// Azure managed identity that access the KeyVault.
-	ManagedIdentityClientID string
-}
-
-// Connect returns a kv.Store that stores key-value pairs on Azure KeyVault.
-func (s *AzureKeyVaultKeyStore) Connect(_ context.Context) (kes.KeyStore, error) {
-	if (s.TenantID != "" || s.ClientID != "" || s.ClientSecret != "") && s.ManagedIdentityClientID != "" {
-		return nil, errors.New("edge: failed to connect to Azure KeyVault: more than one authentication method specified")
-	}
-	var cred azcore.TokenCredential
-	var err error
-	switch {
-	case s.TenantID != "" || s.ClientID != "" || s.ClientSecret != "":
-		cred, err = azidentity.NewClientSecretCredential(s.TenantID, s.ClientID, s.ClientSecret, nil)
-	case s.ManagedIdentityClientID != "":
-		cred, err = azidentity.NewManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{
-			ID: azidentity.ClientID(s.ManagedIdentityClientID),
-		})
-	default:
-		cred, err = azidentity.NewDefaultAzureCredential(nil)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("azure: failed to create default Azure credential: %v", err)
-	}
-	return azure.ConnectWithCredentials(s.Endpoint, cred)
-}
-
-// EntrustKeyControlKeyStore is a structure containing the
-// configuration for Entrust KeyControl.
-type EntrustKeyControlKeyStore struct {
-	// Endpoint is the Entrust KeyControl endpoint.
-	Endpoint string
-
-	// VaultID is the KeyControl Vault UUID.
-	VaultID string
-
-	// BoxID is the KeyControl box ID or name within the Vault.
-	BoxID string
-
-	// Username is the username used for authentication.
-	Username string
-
-	// Password is the password associated with the provided username.
-	Password string
-
-	// CAPath is an optional path to the root
-	// CA certificate(s) for verifying the TLS
-	// certificate of the KeyControl server.
-	//
-	// If empty, the OS default root CA set is
-	// used.
-	CAPath string
-}
-
-// Connect returns a kv.Store that stores key-value pairs on Entrust KeyControl.
-func (s *EntrustKeyControlKeyStore) Connect(ctx context.Context) (kes.KeyStore, error) {
-	var rootCAs *x509.CertPool
-	if s.CAPath != "" {
-		ca, err := https.CertPoolFromFile(s.CAPath)
-		if err != nil {
-			return nil, err
-		}
-		rootCAs = ca
-	}
-	return entrust.Login(ctx, &entrust.Config{
-		Endpoint: s.Endpoint,
-		VaultID:  s.VaultID,
-		BoxID:    s.BoxID,
-		Username: s.Username,
-		Password: s.Password,
-		TLS: &tls.Config{
-			MinVersion: tls.VersionTLS13,
-			RootCAs:    rootCAs,
-		},
-	})
 }
