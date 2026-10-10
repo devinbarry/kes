@@ -5,6 +5,7 @@
 package kesconf
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -41,9 +42,16 @@ func ReadFile(filename string) (*File, error) {
 
 // ReadFrom parses and returns a new KES server configuration file
 // from r.
+//
+// Unknown fields are rejected so that a misspelled or removed
+// option fails instead of being silently ignored.
 func ReadFrom(r io.Reader) (*File, error) {
 	var node yaml.Node
-	if err := yaml.NewDecoder(r).Decode(&node); err != nil {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	if err := yaml.Unmarshal(data, &node); err != nil {
 		return nil, err
 	}
 
@@ -57,7 +65,9 @@ func ReadFrom(r io.Reader) (*File, error) {
 	}
 
 	var y ymlFile
-	if err := node.Decode(&y); err != nil {
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
+	if err := dec.Decode(&y); err != nil {
 		return nil, err
 	}
 	return ymlToServerConfig(&y)
@@ -245,18 +255,6 @@ type TLSConfig struct {
 	// If empty, the KES server will only use the system root
 	// certificates.
 	CAPath string
-
-	// Proxies contains a list of TLS proxy identities.
-	// The KES identity of any TLS/HTTPS proxy sitting directly
-	// in-front of KES has to be included in this list. A KES
-	// server will only accept forwarded client requests from
-	// proxies listed here.
-	Proxies []kes.Identity
-
-	// ForwardCertHeader is the HTTP header key used by any
-	// TLS / HTTPS proxy to forward the actual client certificate
-	// to KES.
-	ForwardCertHeader string
 }
 
 // CacheConfig is a structure that holds the Cache configuration
@@ -333,8 +331,7 @@ type Policy struct {
 	// Identities is a list of KES identities
 	// that are assigned to this policy.
 	//
-	// It must not contain the admin or any
-	// TLS proxy identity.
+	// It must not contain the admin identity.
 	Identities []kes.Identity
 }
 

@@ -1,0 +1,41 @@
+# The production KES configuration shape.
+address: 0.0.0.0:7373
+
+tls:
+  cert: /pki/kes-server.crt
+  key: /pki/kes-server.key
+
+admin:
+  identity: disabled
+
+policy:
+  minio:
+    allow:
+      - /v1/key/create/*
+      - /v1/key/generate/*
+      - /v1/key/decrypt/*
+      - /v1/key/bulk/decrypt/*
+      - /v1/key/list/*
+      - /v1/status
+      - /v1/metrics
+      - /v1/log/audit
+      - /v1/log/error
+    identities:
+      - ${MINIO_IDENTITY}
+
+keystore:
+  vault:
+    endpoint: https://hcvault.example.test:8200
+    engine: kv
+    version: v2
+    prefix: prod/s3/kes
+    transit:
+      engine: transit
+      key: minio-s3
+    approle:
+      id: "role-id"
+      secret: "secret-id"
+    status:
+      ping: 10s
+    tls:
+      ca: /certs/vault-ca.cert

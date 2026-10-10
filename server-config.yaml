@@ -33,68 +33,14 @@ tls:
   # If empty, the system root CAs will be used.
   ca:       ""
 
-  # The TLS proxy configuration. A TLS proxy, like nginx, sits in
-  # between a KES client and the KES server and usually acts as a
-  # load balancer or common endpoint.
-  # All connections from the KES client to the TLS proxy as well
-  # the connections from the TLS proxy to the KES server must be
-  # established over TLS.
-  proxy:
-    # The identities of all TLS proxies directly connected to the
-    # KES server.
-    #
-    # Note that a TLS proxy can act as any identity (including root)
-    # since it can forward arbitrary client certificates. Client certificates
-    # aren't secret information and a malicious TLS proxy can fake any
-    # identity it has seen before. Therefore, its critical that all TLS proxy
-    # identities are secure and trusted servers.
-    identities: []
-    # The HTTP header sent by the TLS proxy to forward certain data
-    # about the client to the KES server.
-    header:
-      # The HTTP header containing the URL-escaped and PEM-encoded
-      # certificate of the kes client forwarded by the TLS proxy.
-      cert: X-Tls-Client-Cert
-
 # The API configuration. The APIs exposed by the KES server can
 # be adjusted here. Each API is identified by its API path.
 #
 # In general, the KES server uses reasonable defaults for all APIs.
 # Only customize the APIs if there is a real need.
 #
-# An example of when you might disable authentication could be to
-# allow the liveness and readiness probes in a Kubernetes environment.
-#
-# When authentication is disabled, the particular API can be
-# accessed by any client that can send HTTPS requests to the
-# KES server.
-#
-# When disabling authentication for any API, the KES server will
-# change its TLS handshake behavior. By default, KES requires that
-# a client sends a client certificate during the handshake or KES
-# aborts the handshake. This means that a client can only send an
-# HTTP request to KES when it provides a certificate during the
-# handshake. This is no longer the case when authentication is
-# disabled for at least one API. Clients should be able to call
-# the API even without a certificate. Hence, KES can no longer
-# require a certificate during the TLS handshake but instead has
-# to check the certificate when executing the API handler.
-#
-# Now, these two behaviors have slightly different semantics:
-# By default, KES does not accept connections from clients without
-# a TLS certificate. When disabling authentication for one API, KES
-# has to accept connections from any client for all APIs. However,
-# the API handlers that still require authentication will reject
-# requests from clients without a certificate. Instead of a TLS
-# error these clients will receive an HTTP error.
-#
-# Currently, authentication can only be disabled for the
-# following APIs:
-#   - /v1/ready
-#   - /v1/status
-#   - /v1/metrics
-#   - /v1/api
-#
+# Every API requires an authenticated mTLS client; only the
+# per-API response timeout can be changed.
 api:
   /v1/ready:
     timeout:   15s
@@ -223,22 +169,6 @@ keys:
 # keys in-memory. In this case all keys are lost when the KES server
 # restarts.
 keystore:
-  # Configuration for storing keys on the filesystem.
-  # The path must be path to a directory. If it doesn't
-  # exist then the KES server will create the directory.
-  #
-  # The main purpose of the fs configuration is testing
-  # and development. It should not be used for production.
-  fs:
-    path: "" # Path to directory. Keys will be stored as files.
-
-  # Configuration for storing keys on the filesystem,
-  # using an encryption key.
-  encryptedfs:
-    masterKeyPath: ""   # Path to secret key file with 32 bytes.
-    masterKeyCipher: "" # Cipher to use, AES256 or ChaCha20. Changing this value breaks any existing encrypted data.
-    path: ""            # Path to directory. Keys will be stored as files.
-
   # Hashicorp Vault configuration. The KES server will store/fetch
   # secret keys at/from Vault's key-value backend.
   #
@@ -269,98 +199,3 @@ keystore:
       ca: ""      # Path to one or more PEM root CA certificates
     status:     # Vault status configuration. The server will periodically reach out to Vault to check its status.
       ping: 10s   # Duration until the server checks Vault's status again.
-
-  fortanix:
-    # The Fortanix SDKMS key store. The server will store secret keys at the Fortanix SDKMS.
-    # See: https://www.fortanix.com/products/data-security-manager/key-management-service
-    sdkms:
-      endpoint: ""   # The Fortanix SDKMS endpoint - for example: https://sdkms.fortanix.com
-      group_id: ""   # An optional group ID newly created keys will be placed at. For example: ce08d547-2a82-411e-ae2d-83655a4b7617
-                     # If empty, the applications default group is used.
-      credentials:   # The Fortanix SDKMS access credentials
-        key: ""      # The application's API key - for example: NWMyMWZlNzktZDRmZS00NDFhLWFjMzMtNjZmY2U0Y2ViMThhOnJWQlh0M1lZaDcxZC1NNnh4OGV2MWNQSDVVSEt1eXEyaURqMHRrRU1pZDg=
-      tls:           # The KeySecure client TLS configuration
-        ca: ""       # Path to one or more PEM-encoded CA certificates for verifying the Fortanix SDKMS TLS certificate.
-  aws:
-    # The AWS SecretsManager key store. The server will store
-    # secret keys at the AWS SecretsManager encrypted with
-    # AWS-KMS. See: https://aws.amazon.com/secrets-manager
-    secretsmanager:
-      endpoint: ""   # The AWS SecretsManager endpoint - for example,: secretsmanager.us-east-2.amazonaws.com
-      region: ""     # The AWS region of the SecretsManager - for example,: us-east-2
-      kmskey: ""     # The AWS-KMS key ID used to en/decrypt secrets at the SecretsManager. By default (if not set) the default AWS-KMS key will be used.
-      credentials:   # The AWS credentials for accessing secrets at the AWS SecretsManager.
-        accesskey: ""  # Your AWS Access Key
-        secretkey: ""  # Your AWS Secret Key
-        token: ""      # Your AWS session token (usually optional)
-
-  gemalto:
-    # The Gemalto KeySecure key store. The server will store
-    # keys as secrets on the KeySecure instance.
-    keysecure:
-      endpoint: ""    # The KeySecure endpoint - for example, https://127.0.0.1
-      credentials:    # The authentication to access the KeySecure instance.
-        token: ""     # The refresh token to obtain new short-lived authentication tokens.
-        domain: ""    # The KeySecure domain for which the refresh token is valid. If empty, defaults to the root domain.
-        retry: 15s    # The time the KES server waits before it tries to re-authenticate after connection loss.
-      tls:            # The KeySecure client TLS configuration
-        ca: ""        # Path to one or more PEM-encoded CA certificates for verifying the KeySecure TLS certificate.
-
-  gcp:
-    # The Google Cloud Platform secret manager.
-    # For more information, see:
-    # https://cloud.google.com/secret-manager
-    secretmanager:
-      # The project ID is a unique, user-assigned ID that can be used by Google APIs.
-      # The project ID must be a unique string of 6 to 30 lowercase letters, digits, or hyphens.
-      # It must start with a letter, and cannot have a trailing hyphen.
-      # See: https://cloud.google.com/resource-manager/docs/creating-managing-projects#before_you_begin
-      project_id: ""
-      # An optional GCP SecretManager endpoint. If not set, defaults to: secretmanager.googleapis.com:443
-      endpoint: ""
-      # An optional list of GCP OAuth2 scopes. For a list of GCP scopes refer to: https://developers.google.com/identity/protocols/oauth2/scopes
-      # If not set, the GCP default scopes are used.
-      scopes:
-      - ""
-      # The credentials for your GCP service account. If running inside GCP (app engine) the credentials
-      # can be empty and will be fetched from the app engine environment automatically.
-      credentials:
-        client_email:   "" # The service account email       - for example, <account>@<project-ID>.iam.gserviceaccount.com
-        client_id:      "" # The service account client ID   - for example, 113491952745362495489"
-        private_key_id: "" # The service account private key - for example, 381514ebd3cf45a64ca8adc561f0ce28fca5ec06
-        private_key:    "" # The raw encoded private key of the service account -
-                     #   for example, "-----BEGIN PRIVATE KEY-----\n ... \n-----END PRIVATE KEY-----\n
-
-  azure:
-    # The Azure KeyVault configuration.
-    # For more information, see:
-    # https://azure.microsoft.com/services/key-vault
-    keyvault:
-      endpoint: ""         # The KeyVault endpoint - for example, https://my-instance.vault.azure.net
-      # Azure client credentials used to
-      # authenticate to Azure KeyVault.
-      credentials:
-        tenant_id: ""      # The ID of the tenant the client belongs to - that is, a UUID.
-        client_id: ""      # The ID of the client - that is, a UUID.
-        client_secret: ""  # The value of the client secret.
-      # Azure managed identity used to
-      # authenticate to Azure KeyVault
-      # with Azure managed credentials.
-      managed_identity:
-        client_id: ""      # The Azure managed identity of the client - that is, a UUID.
-
-  entrust:
-    # The Entrust KeyControl configuration.
-    # For more information, see:
-    # https://www.entrust.com/digital-security/key-management/keycontrol
-    keycontrol:
-      endpoint: ""     # The KeyControl endpoint - for example, https://keycontrol.my-org.com
-      vault_id: ""     # The Vault ID            - for example, e30497c1-bff7-4e81-beb7-fb35c4b7410c
-      box_id:   ""     # The Box name or ID      - for example, tenant-1
-      # The KeyControl access credentials
-      credentials:
-        username: ""   # A username with access to the Vault and Box.
-        password: ""   # The user password
-      # The KeyControl client TLS configuration
-      tls:
-        ca: ""         # Path to one or more PEM-encoded CA certificates for verifying the KeyControl TLS certificate.

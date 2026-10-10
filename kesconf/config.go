@@ -33,13 +33,6 @@ type ymlFile struct {
 		CAPath      env[string] `yaml:"ca"`
 		Password    env[string] `yaml:"password"`
 		ClientAuth  env[string] `yaml:"auth"`
-
-		Proxy struct {
-			Identities []env[kes.Identity] `yaml:"identities"`
-			Header     struct {
-				ClientCert env[string] `yaml:"cert"`
-			} `yaml:"header"`
-		} `yaml:"proxy"`
 	} `yaml:"tls"`
 
 	Policies map[string]struct {
@@ -162,21 +155,10 @@ func ymlToServerConfig(y *ymlFile) (*File, error) {
 		clientAuth = tls.RequireAndVerifyClientCert
 	}
 
-	for _, proxy := range y.TLS.Proxy.Identities {
-		if proxy.Value == y.Admin.Identity.Value {
-			return nil, fmt.Errorf("kesconf: invalid tls proxy: identity '%s' is already admin", proxy.Value)
-		}
-	}
-
 	for name, policy := range y.Policies {
 		for _, identity := range policy.Identities {
 			if identity.Value == y.Admin.Identity.Value {
 				return nil, fmt.Errorf("kesconf: invalid policy '%s': identity '%s' is already admin", name, identity.Value)
-			}
-			for _, proxy := range y.TLS.Proxy.Identities {
-				if identity.Value == proxy.Value {
-					return nil, fmt.Errorf("kesconf: invalid policy '%s': identity '%s' is already a TLS proxy", name, identity.Value)
-				}
 			}
 		}
 	}
@@ -225,12 +207,11 @@ func ymlToServerConfig(y *ymlFile) (*File, error) {
 		Addr:  y.Addr.Value,
 		Admin: y.Admin.Identity.Value,
 		TLS: &TLSConfig{
-			PrivateKey:        y.TLS.PrivateKey.Value,
-			Certificate:       y.TLS.Certificate.Value,
-			Password:          y.TLS.Password.Value,
-			ClientAuth:        clientAuth,
-			CAPath:            y.TLS.CAPath.Value,
-			ForwardCertHeader: y.TLS.Proxy.Header.ClientCert.Value,
+			PrivateKey:  y.TLS.PrivateKey.Value,
+			Certificate: y.TLS.Certificate.Value,
+			Password:    y.TLS.Password.Value,
+			ClientAuth:  clientAuth,
+			CAPath:      y.TLS.CAPath.Value,
 		},
 		Cache: &CacheConfig{
 			Expiry:        y.Cache.Expiry.Any.Value,
@@ -242,12 +223,6 @@ func ymlToServerConfig(y *ymlFile) (*File, error) {
 			AuditLevel: auditLevel,
 		},
 		KeyStore: keystore,
-	}
-	if len(y.TLS.Proxy.Identities) > 0 {
-		c.TLS.Proxies = make([]kes.Identity, 0, len(y.TLS.Proxy.Identities))
-		for _, proxy := range y.TLS.Proxy.Identities {
-			c.TLS.Proxies = append(c.TLS.Proxies, proxy.Value)
-		}
 	}
 	if len(y.Policies) > 0 {
 		c.Policies = make(map[string]Policy, len(y.Policies))
