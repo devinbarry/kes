@@ -29,7 +29,6 @@ Options:
     --error                  Print error logs.
     --json                   Print log events as JSON.
 
-    -k, --insecure           Skip TLS certificate validation.
     -h, --help               Print command line options.
 
 Examples:
@@ -42,15 +41,13 @@ func logCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, logCmdUsage) }
 
 	var (
-		auditFlag          bool
-		errorFlag          bool
-		jsonFlag           bool
-		insecureSkipVerify bool
+		auditFlag bool
+		errorFlag bool
+		jsonFlag  bool
 	)
 	cmd.BoolVar(&auditFlag, "audit", true, "Print audit logs")
 	cmd.BoolVar(&errorFlag, "error", false, "Print error logs")
 	cmd.BoolVar(&jsonFlag, "json", false, "Print log events as JSON")
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(2)
@@ -67,9 +64,7 @@ func logCmd(args []string) {
 		auditFlag = !auditFlag
 	}
 
-	client := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	client := newClient(config{})
 	ctx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancelCtx()
 

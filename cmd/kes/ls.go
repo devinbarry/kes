@@ -31,13 +31,11 @@ Options:
         --json                  Print output in JSON format.
     -i, --identity              List identities.
     -p, --policy                List policy names.
-    -k, --insecure              Skip server certificate verification.
 `
 
 func ls(args []string) {
 	var (
 		apiKey     string
-		skipVerify bool
 		jsonOutput bool
 		host       string
 		policies   bool
@@ -46,7 +44,6 @@ func ls(args []string) {
 
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flagsAPIKey(flags, &apiKey)
-	flagsInsecureSkipVerify(flags, &skipVerify)
 	flagsOutputJSON(flags, &jsonOutput)
 	flagsServer(flags, &host)
 	flags.BoolVarP(&policies, "policy", "p", false, "")
@@ -111,9 +108,8 @@ func ls(args []string) {
 	}
 
 	client := newClient(config{
-		Endpoint:           host,
-		APIKey:             apiKey,
-		InsecureSkipVerify: skipVerify,
+		Endpoint: host,
+		APIKey:   apiKey,
 	})
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()

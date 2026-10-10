@@ -13,13 +13,6 @@ import (
 // many commands. Common flags should have common names
 // to make command usage consistent.
 
-// flagsInsecureSkipVerify adds a bool flag '-k, --insecure'
-// that sets insecureSkipVerify to true if provided on the
-// command line.
-func flagsInsecureSkipVerify(f *flag.FlagSet, insecureSkipVerify *bool) {
-	f.BoolVarP(insecureSkipVerify, "insecure", "k", false, "Skip server certificate verification")
-}
-
 func flagsAPIKey(f *flag.FlagSet, apiKey *string) {
 	f.StringVarP(apiKey, "api-key", "a", cli.Env(cli.EnvAPIKey), "API key to authenticate to the KES server")
 }

@@ -20,6 +20,10 @@ const (
 	EnvPrivateKey = "MINIO_KES_KEY_FILE"
 
 	EnvCertificate = "MINIO_KES_CERT_FILE"
+
+	// EnvCAFile is an optional PEM file of CA certificates the client
+	// uses to verify the server. If not set, the system roots are used.
+	EnvCAFile = "MINIO_KES_CA_FILE"
 )
 
 // Env retrieves the value of the environment variable named by the key.

@@ -147,8 +147,8 @@ func (s *Server) UpdateTLS(conf *tls.Config) error {
 	if conf == nil || (len(conf.Certificates) == 0 && conf.GetCertificate == nil && conf.GetConfigForClient == nil) {
 		return errors.New("kes: tls config contains no server certificate")
 	}
-	if conf.ClientAuth == tls.NoClientCert {
-		return errors.New("kes: tls client auth must request client certificate")
+	if !requiresClientCert(conf.ClientAuth) {
+		return errors.New("kes: tls client auth must require a client certificate")
 	}
 
 	s.mu.Lock()
@@ -161,7 +161,7 @@ func (s *Server) UpdateTLS(conf *tls.Config) error {
 		return errors.New("kes: server not started")
 	}
 
-	s.tls.Store(conf)
+	s.tls.Store(withTLS13(conf))
 	return nil
 }
 
@@ -265,7 +265,7 @@ func (s *Server) Update(conf *Config) (io.Closer, error) {
 	mux, routes := initRoutes(s, conf.Routes, state.Metrics)
 	state.Routes = routes
 
-	s.tls.Store(conf.TLS.Clone())
+	s.tls.Store(withTLS13(conf.TLS))
 	s.state.Store(state)
 	s.handler.Store(mux)
 
@@ -439,7 +439,7 @@ func (s *Server) listen(ctx context.Context, ln net.Listener, conf *Config) (net
 	mux, routes := initRoutes(s, conf.Routes, state.Metrics)
 	state.Routes = routes
 
-	s.tls.Store(conf.TLS.Clone())
+	s.tls.Store(withTLS13(conf.TLS))
 	s.state.Store(state)
 	s.handler.Store(mux)
 
@@ -457,7 +457,7 @@ func (s *Server) listen(ctx context.Context, ln net.Listener, conf *Config) (net
 	s.started = true
 
 	return tls.NewListener(ln, &tls.Config{
-		MinVersion: tls.VersionTLS12,
+		MinVersion: tls.VersionTLS13,
 		GetConfigForClient: func(*tls.ClientHelloInfo) (*tls.Config, error) {
 			return s.tls.Load(), nil
 		},
@@ -1171,4 +1171,18 @@ func (s *Server) logAudit(resp *api.Response, req *api.Request) {
 	defer auditLog.out.Remove(w)
 
 	<-req.Context().Done()
+}
+
+// requiresClientCert reports whether auth makes every TLS
+// handshake fail unless the client presents a certificate.
+func requiresClientCert(auth tls.ClientAuthType) bool {
+	return auth == tls.RequireAnyClientCert || auth == tls.RequireAndVerifyClientCert
+}
+
+// withTLS13 returns a copy of conf that refuses protocol
+// versions older than TLS 1.3.
+func withTLS13(conf *tls.Config) *tls.Config {
+	c := conf.Clone()
+	c.MinVersion = tls.VersionTLS13
+	return c
 }

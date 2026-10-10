@@ -12,8 +12,8 @@ import (
 )
 
 // CertPoolFromFile returns a X.509 certificate pool that contains
-// all system root certificates from x509.SystemCertPool and
-// the certificates loaded from the given filename.
+// only the certificates loaded from the given filename. System root
+// certificates are deliberately not included.
 //
 // If filename is a directory LoadCertPool parses all files inside
 // as PEM-encoded X.509 certificate and adds them to the certificate
@@ -29,10 +29,7 @@ func CertPoolFromFile(filename string) (*x509.CertPool, error) {
 		return nil, err
 	}
 
-	pool, _ := x509.SystemCertPool()
-	if pool == nil {
-		pool = x509.NewCertPool()
-	}
+	pool := x509.NewCertPool()
 	if !stat.IsDir() {
 		if err = appendCertificate(pool, filename); err != nil {
 			return nil, err

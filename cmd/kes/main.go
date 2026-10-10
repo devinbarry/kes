@@ -122,11 +122,10 @@ func main() {
 
 // config is a structure containing configuration for a client.
 type config struct {
-	Endpoint           string
-	APIKey             string
-	PrivateKeyFile     string
-	CertificateFile    string
-	InsecureSkipVerify bool
+	Endpoint        string
+	APIKey          string
+	PrivateKeyFile  string
+	CertificateFile string
 }
 
 // newClient returns a new client using the given config.
@@ -231,11 +230,20 @@ func newClient(conf config) *kes.Client {
 		}
 	}
 
+	var rootCAs *x509.CertPool
+	if caFile := cli.Env(cli.EnvCAFile); caFile != "" {
+		pool, err := https.CertPoolFromFile(caFile)
+		if err != nil {
+			cli.Exitf("failed to read CA certificates from '%s': %v", caFile, err)
+		}
+		rootCAs = pool
+	}
 	client := kes.NewClientWithConfig("", &tls.Config{
+		MinVersion: tls.VersionTLS13,
+		RootCAs:    rootCAs,
 		GetClientCertificate: func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
 			return &cert, nil
 		},
-		InsecureSkipVerify: false,
 	})
 	client.Endpoints = endpoints
 	return client

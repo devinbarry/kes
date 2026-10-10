@@ -55,8 +55,8 @@ func startServer(ctx context.Context, conf *Config) (*Server, string) {
 	}
 	if conf.TLS == nil {
 		conf.TLS = &tls.Config{
-			MinVersion:   tls.VersionTLS12,
-			ClientAuth:   tls.RequestClientCert,
+			MinVersion:   tls.VersionTLS13,
+			ClientAuth:   tls.RequireAnyClientCert,
 			Certificates: []tls.Certificate{defaultServerCertificate()},
 			NextProtos:   []string{"h2", "http/1.1"},
 		}
@@ -125,7 +125,7 @@ func defaultClient(endpoint string) *kes.Client {
 	rootCAs.AddCert(defaultServerCertificate().Leaf)
 
 	return kes.NewClientWithConfig(endpoint, &tls.Config{
-		MinVersion: tls.VersionTLS12,
+		MinVersion: tls.VersionTLS13,
 		RootCAs:    rootCAs,
 		GetClientCertificate: func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
 			return &clientCert, nil

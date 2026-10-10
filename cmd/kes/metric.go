@@ -28,7 +28,6 @@ const metricCmdUsage = `Usage:
 Options:
     --rate                   Scrap rate when monitoring metrics. (default: 5s)
 
-    -k, --insecure           Skip TLS certificate validation
     -h, --help               Print command line options.
 `
 
@@ -37,11 +36,9 @@ func metricCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, metricCmdUsage) }
 
 	var (
-		rate               time.Duration
-		insecureSkipVerify bool
+		rate time.Duration
 	)
 	cmd.DurationVar(&rate, "rate", 5*time.Second, "Scrap rate when monitoring metrics")
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(2)
@@ -52,9 +49,7 @@ func metricCmd(args []string) {
 		cli.Fatal("too many arguments. See 'kes metric --help'")
 	}
 
-	client := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	client := newClient(config{})
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 

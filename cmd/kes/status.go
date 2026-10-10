@@ -27,7 +27,6 @@ const statusCmdUsage = `Usage:
     kes status [options]
 
 Options:
-    -k, --insecure           Skip TLS certificate validation.
     -s, --short              Print status information in a short summary format.
         --api                List all server APIs.
         --json               Print status information in JSON format.
@@ -45,17 +44,15 @@ func statusCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, statusCmdUsage) }
 
 	var (
-		jsonFlag           bool
-		shortFlag          bool
-		apiFlag            bool
-		colorFlag          colorOption
-		insecureSkipVerify bool
+		jsonFlag  bool
+		shortFlag bool
+		apiFlag   bool
+		colorFlag colorOption
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print status information in JSON format")
 	cmd.BoolVar(&apiFlag, "api", false, "List all server APIs")
 	cmd.Var(&colorFlag, "color", "Specify when to use colored output")
 	cmd.BoolVarP(&shortFlag, "short", "s", false, "Print status information in a short summary format")
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(2)
@@ -66,9 +63,7 @@ func statusCmd(args []string) {
 		cli.Fatal("too many arguments. See 'kes status --help'")
 	}
 
-	client := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	client := newClient(config{})
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 

@@ -14,6 +14,7 @@ package vault
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -87,30 +88,9 @@ func Connect(ctx context.Context, c *Config) (*Store, error) {
 		}
 	}
 
-	tlsConfig := &vaultapi.TLSConfig{
-		ClientKey:  c.PrivateKey,
-		ClientCert: c.Certificate,
-	}
-	if c.CAPath != "" {
-		stat, err := os.Stat(c.CAPath)
-		if err != nil {
-			return nil, fmt.Errorf("vault: failed to open '%s': %v", c.CAPath, err)
-		}
-		if stat.IsDir() {
-			tlsConfig.CAPath = c.CAPath
-		} else {
-			tlsConfig.CACert = c.CAPath
-		}
-	}
-
-	config := vaultapi.DefaultConfig()
-	config.Address = c.Endpoint
-	config.CloneTLSConfig = true // Required for status checks
-	config.CloneToken = true     // Required for status checks
-	config.ConfigureTLS(tlsConfig)
-	if tr, ok := config.HttpClient.Transport.(*http.Transport); ok {
-		tr.DisableKeepAlives = true
-		tr.MaxIdleConnsPerHost = -1
+	config, err := newClientConfig(c)
+	if err != nil {
+		return nil, err
 	}
 	vaultClient, err := vaultapi.NewClient(config)
 	if err != nil {
@@ -518,5 +498,65 @@ func (s *Store) List(ctx context.Context, prefix string, n int) ([]string, strin
 // Close closes the Store. It stops any authentication renewal in the background.
 func (s *Store) Close() error {
 	s.stop()
+	return nil
+}
+
+// newClientConfig returns the Vault SDK configuration for c. TLS 1.3 and
+// certificate verification are always enforced, and the SDK's environment
+// variables and HTTP proxy settings are refused or ignored.
+func newClientConfig(c *Config) (*vaultapi.Config, error) {
+	tlsConfig := &vaultapi.TLSConfig{
+		ClientKey:  c.PrivateKey,
+		ClientCert: c.Certificate,
+	}
+	if c.CAPath != "" {
+		stat, err := os.Stat(c.CAPath)
+		if err != nil {
+			return nil, fmt.Errorf("vault: failed to open '%s': %v", c.CAPath, err)
+		}
+		if stat.IsDir() {
+			tlsConfig.CAPath = c.CAPath
+		} else {
+			tlsConfig.CACert = c.CAPath
+		}
+	}
+
+	// The Vault SDK reads VAULT_* variables (for example VAULT_SKIP_VERIFY,
+	// VAULT_CACERT, VAULT_TOKEN, VAULT_HEADERS). Only the KES config decides
+	// how KES reaches and trusts Vault.
+	if err := rejectVaultEnv(os.Environ()); err != nil {
+		return nil, err
+	}
+	config := vaultapi.DefaultConfig()
+	if config.Error != nil {
+		return nil, fmt.Errorf("vault: invalid client config: %v", config.Error)
+	}
+	config.Address = c.Endpoint
+	config.CloneTLSConfig = true // Required for status checks
+	config.CloneToken = true     // Required for status checks
+	if err := config.ConfigureTLS(tlsConfig); err != nil {
+		return nil, fmt.Errorf("vault: invalid TLS config: %v", err)
+	}
+	tr, ok := config.HttpClient.Transport.(*http.Transport)
+	if !ok || tr.TLSClientConfig == nil {
+		return nil, errors.New("vault: unexpected HTTP transport")
+	}
+	tr.TLSClientConfig.MinVersion = tls.VersionTLS13
+	tr.TLSClientConfig.InsecureSkipVerify = false
+	tr.Proxy = nil // Never route Vault traffic through an environment proxy.
+	tr.DisableKeepAlives = true
+	tr.MaxIdleConnsPerHost = -1
+	return config, nil
+}
+
+// rejectVaultEnv returns an error if env, in os.Environ form,
+// sets any variable the Vault SDK would read.
+func rejectVaultEnv(env []string) error {
+	for _, kv := range env {
+		if strings.HasPrefix(kv, "VAULT_") {
+			name, _, _ := strings.Cut(kv, "=")
+			return fmt.Errorf("vault: environment variable %s is set; configure Vault only in the KES config file", name)
+		}
+	}
 	return nil
 }

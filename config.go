@@ -132,8 +132,8 @@ func verifyConfig(c *Config) error {
 	if c == nil || c.TLS == nil || (len(c.TLS.Certificates) == 0 && c.TLS.GetCertificate == nil && c.TLS.GetConfigForClient == nil) {
 		return errors.New("kes: tls config contains no server certificate")
 	}
-	if c.TLS.ClientAuth == tls.NoClientCert {
-		return errors.New("kes: tls client auth must request client certificate")
+	if !requiresClientCert(c.TLS.ClientAuth) {
+		return errors.New("kes: tls client auth must require a client certificate")
 	}
 	if c.Keys == nil {
 		return errors.New("kes: config contains no key store")

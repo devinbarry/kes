@@ -432,7 +432,6 @@ const infoIdentityCmdUsage = `Usage:
     kes identity info [options] [<identity>]
 
 Options:
-    -k, --insecure           Skip TLS certificate validation.
         --json               Print identity information in JSON format.
         --color <when>       Specify when to use colored output. The automatic
                              mode only enables colors if an interactive terminal
@@ -452,14 +451,12 @@ func infoIdentityCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, infoIdentityCmdUsage) }
 
 	var (
-		jsonFlag           bool
-		colorFlag          colorOption
-		insecureSkipVerify bool
-		enclaveName        string
+		jsonFlag    bool
+		colorFlag   colorOption
+		enclaveName string
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print policy information in JSON format")
 	cmd.Var(&colorFlag, "color", "Specify when to use colored output")
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	cmd.StringVarP(&enclaveName, "enclave", "e", "", "Operate within the specified enclave")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -490,9 +487,7 @@ func infoIdentityCmd(args []string) {
 		dotDenyStyle = dotDenyStyle.Foreground(ColorDotDeny)
 	}
 
-	client := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	client := newClient(config{})
 	if cmd.NArg() == 0 {
 		info, policy, err := client.DescribeSelf(ctx)
 		if err != nil {
@@ -574,7 +569,6 @@ const lsIdentityCmdUsage = `Usage:
     kes identity ls [options] [<pattern>]
 
 Options:
-    -k, --insecure           Skip TLS certificate validation.
         --json               Print identities in JSON format.
         --color <when>       Specify when to use colored output. The automatic
                              mode only enables colors if an interactive terminal
@@ -594,13 +588,11 @@ func lsIdentityCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, lsIdentityCmdUsage) }
 
 	var (
-		jsonFlag           bool
-		colorFlag          colorOption
-		insecureSkipVerify bool
+		jsonFlag  bool
+		colorFlag colorOption
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print identities in JSON format")
 	cmd.Var(&colorFlag, "color", "Specify when to use colored output")
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(2)
@@ -620,9 +612,7 @@ func lsIdentityCmd(args []string) {
 	ctx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancelCtx()
 
-	enclave := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	enclave := newClient(config{})
 	iter := &kes.ListIter[kes.Identity]{
 		NextFunc: enclave.ListIdentities,
 	}

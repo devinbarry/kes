@@ -67,7 +67,6 @@ const lsPolicyCmdUsage = `Usage:
     kes policy ls [options] [<pattern>]
 
 Options:
-    -k, --insecure           Skip TLS certificate validation.
         --json               Print policies in JSON format.
         --color <when>       Specify when to use colored output. The automatic
                              mode only enables colors if an interactive terminal
@@ -87,13 +86,11 @@ func lsPolicyCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, lsPolicyCmdUsage) }
 
 	var (
-		jsonFlag           bool
-		colorFlag          colorOption
-		insecureSkipVerify bool
+		jsonFlag  bool
+		colorFlag colorOption
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print identities in JSON format")
 	cmd.Var(&colorFlag, "color", "Specify when to use colored output")
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(2)
@@ -113,9 +110,7 @@ func lsPolicyCmd(args []string) {
 	ctx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancelCtx()
 
-	enclave := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	enclave := newClient(config{})
 	iter := &kes.ListIter[string]{
 		NextFunc: enclave.ListPolicies,
 	}
@@ -153,7 +148,6 @@ const infoPolicyCmdUsage = `Usage:
     kes policy info [options] <name>
 
 Options:
-    -k, --insecure           Skip TLS certificate validation.
         --json               Print policy in JSON format.
         --color <when>       Specify when to use colored output. The automatic
                              mode only enables colors if an interactive terminal
@@ -173,14 +167,12 @@ func infoPolicyCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, infoPolicyCmdUsage) }
 
 	var (
-		jsonFlag           bool
-		colorFlag          colorOption
-		insecureSkipVerify bool
-		enclaveName        string
+		jsonFlag    bool
+		colorFlag   colorOption
+		enclaveName string
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print policy in JSON format.")
 	cmd.Var(&colorFlag, "color", "Specify when to use colored output")
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	cmd.StringVarP(&enclaveName, "enclave", "e", "", "Operate within the specified enclave")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -196,9 +188,7 @@ func infoPolicyCmd(args []string) {
 	defer cancelCtx()
 
 	name := cmd.Arg(0)
-	client := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	client := newClient(config{})
 	info, err := client.DescribePolicy(ctx, name)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
@@ -240,7 +230,6 @@ const showPolicyCmdUsage = `Usage:
     kes policy show [options] <name>
 
 Options:
-    -k, --insecure           Skip TLS certificate validation.
     -e, --enclave <name>     Operate within the specified enclave.
         --json               Print policy in JSON format.
 
@@ -255,12 +244,10 @@ func showPolicyCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, showPolicyCmdUsage) }
 
 	var (
-		insecureSkipVerify bool
-		jsonFlag           bool
-		enclaveName        string
+		jsonFlag    bool
+		enclaveName string
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print policy in JSON format.")
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	cmd.StringVarP(&enclaveName, "enclave", "e", "", "Operate within the specified enclave")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -273,9 +260,7 @@ func showPolicyCmd(args []string) {
 	}
 
 	name := cmd.Arg(0)
-	client := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	client := newClient(config{})
 
 	ctx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancelCtx()

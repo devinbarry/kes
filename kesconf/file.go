@@ -148,7 +148,7 @@ func (f *File) TLSConfig() (*tls.Config, error) {
 	}
 
 	return &tls.Config{
-		MinVersion:   tls.VersionTLS12,
+		MinVersion:   tls.VersionTLS13,
 		ClientAuth:   f.TLS.ClientAuth,
 		Certificates: []tls.Certificate{certificate},
 		NextProtos:   []string{"h2", "http/1.1"},

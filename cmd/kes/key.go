@@ -82,7 +82,6 @@ const createKeyCmdUsage = `Usage:
     kes key create [options] <name>...
 
 Options:
-    -k, --insecure           Skip TLS certificate validation.
     -e, --enclave <name>     Operate within the specified enclave.
 
     -h, --help               Print command line options.
@@ -97,10 +96,8 @@ func createKeyCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, createKeyCmdUsage) }
 
 	var (
-		insecureSkipVerify bool
-		enclaveName        string
+		enclaveName string
 	)
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	cmd.StringVarP(&enclaveName, "enclave", "e", "", "Operate within the specified enclave")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -116,9 +113,7 @@ func createKeyCmd(args []string) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
-	client := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	client := newClient(config{})
 	for _, name := range cmd.Args() {
 		if err := client.CreateKey(ctx, name); err != nil {
 			if errors.Is(err, context.Canceled) {
@@ -133,7 +128,6 @@ const importKeyCmdUsage = `Usage:
     kes key import [options] <name> [<key>]
 
 Options:
-    -k, --insecure           Skip TLS certificate validation.
 
     -h, --help               Print command line options.
 
@@ -145,8 +139,6 @@ func importKeyCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, importKeyCmdUsage) }
 
-	var insecureSkipVerify bool
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(2)
@@ -171,9 +163,7 @@ func importKeyCmd(args []string) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
-	enclave := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	enclave := newClient(config{})
 	if err = enclave.ImportKey(ctx, name, &kes.ImportKeyRequest{Key: key}); err != nil {
 		if errors.Is(err, context.Canceled) {
 			os.Exit(1)
@@ -186,7 +176,6 @@ const describeKeyCmdUsage = `Usage:
     kes key info [options] <name>
 
 Options:
-    -k, --insecure           Skip TLS certificate validation.
         --json               Print keys in JSON format. 
         --color <when>       Specify when to use colored output. The automatic
                              mode only enables colors if an interactive terminal
@@ -206,14 +195,12 @@ func describeKeyCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, describeKeyCmdUsage) }
 
 	var (
-		jsonFlag           bool
-		colorFlag          colorOption
-		insecureSkipVerify bool
-		enclaveName        string
+		jsonFlag    bool
+		colorFlag   colorOption
+		enclaveName string
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print identities in JSON format")
 	cmd.Var(&colorFlag, "color", "Specify when to use colored output")
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	cmd.StringVarP(&enclaveName, "enclave", "e", "", "Operate within the specified enclave")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -233,9 +220,7 @@ func describeKeyCmd(args []string) {
 	defer cancelCtx()
 
 	name := cmd.Arg(0)
-	client := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	client := newClient(config{})
 	info, err := client.DescribeKey(ctx, name)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
@@ -265,7 +250,6 @@ const lsKeyCmdUsage = `Usage:
     kes key ls [options] [<pattern>]
 
 Options:
-    -k, --insecure           Skip TLS certificate validation.
         --json               Print keys in JSON format. 
         --color <when>       Specify when to use colored output. The automatic
                              mode only enables colors if an interactive terminal
@@ -286,14 +270,12 @@ func lsKeyCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, lsKeyCmdUsage) }
 
 	var (
-		jsonFlag           bool
-		colorFlag          colorOption
-		insecureSkipVerify bool
-		enclaveName        string
+		jsonFlag    bool
+		colorFlag   colorOption
+		enclaveName string
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print identities in JSON format")
 	cmd.Var(&colorFlag, "color", "Specify when to use colored output")
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	cmd.StringVarP(&enclaveName, "enclave", "e", "", "Operate within the specified enclave")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -314,9 +296,7 @@ func lsKeyCmd(args []string) {
 	ctx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancelCtx()
 
-	enclave := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	enclave := newClient(config{})
 	iter := &kes.ListIter[string]{
 		NextFunc: enclave.ListKeys,
 	}
@@ -355,7 +335,6 @@ const rmKeyCmdUsage = `Usage:
     kes key rm [options] <name>...
 
 Options:
-    -k, --insecure           Skip X.509 certificate validation during TLS handshake.
     -e, --enclave <name>     Operate within the specified enclave.
 
     -h, --help               Show list of command-line options.
@@ -370,10 +349,8 @@ func rmKeyCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, rmKeyCmdUsage) }
 
 	var (
-		insecureSkipVerify bool
-		enclaveName        string
+		enclaveName string
 	)
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	cmd.StringVarP(&enclaveName, "enclave", "e", "", "Operate within the specified enclave")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -388,9 +365,7 @@ func rmKeyCmd(args []string) {
 	ctx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancelCtx()
 
-	client := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	client := newClient(config{})
 	for _, name := range cmd.Args() {
 		if err := client.DeleteKey(ctx, name); err != nil {
 			if errors.Is(err, context.Canceled) {
@@ -405,7 +380,6 @@ const encryptKeyCmdUsage = `Usage:
     kes key encrypt [options] <name> <message>
 
 Options:
-    -k, --insecure           Skip TLS certificate validation.
     -e, --enclave <name>     Operate within the specified enclave.
 
     -h, --help               Print command line options.
@@ -419,10 +393,8 @@ func encryptKeyCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, encryptKeyCmdUsage) }
 
 	var (
-		insecureSkipVerify bool
-		enclaveName        string
+		enclaveName string
 	)
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	cmd.StringVarP(&enclaveName, "enclave", "e", "", "Operate within the specified enclave")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -446,9 +418,7 @@ func encryptKeyCmd(args []string) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
-	client := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	client := newClient(config{})
 	ciphertext, err := client.Encrypt(ctx, name, []byte(message), nil)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
@@ -468,7 +438,6 @@ const decryptKeyCmdUsage = `Usage:
     kes key decrypt [options] <name> <ciphertext> [<context>]
 
 Options:
-    -k, --insecure           Skip TLS certificate validation.
     -e, --enclave <name>     Operate within the specified enclave.
 
     -h, --help               Print command line options.
@@ -483,10 +452,8 @@ func decryptKeyCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, decryptKeyCmdUsage) }
 
 	var (
-		insecureSkipVerify bool
-		enclaveName        string
+		enclaveName string
 	)
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	cmd.StringVarP(&enclaveName, "enclave", "e", "", "Operate within the specified enclave")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -521,9 +488,7 @@ func decryptKeyCmd(args []string) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
-	client := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	client := newClient(config{})
 	plaintext, err := client.Decrypt(ctx, name, ciphertext, associatedData)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
@@ -543,7 +508,6 @@ const dekCmdUsage = `Usage:
     kes key dek <name> [<context>]
 
 Options:
-    -k, --insecure           Skip TLS certificate validation.
     -e, --enclave <name>     Operate within the specified enclave.
 
     -h, --help               Print command line options.
@@ -557,10 +521,8 @@ func dekCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, dekCmdUsage) }
 
 	var (
-		insecureSkipVerify bool
-		enclaveName        string
+		enclaveName string
 	)
-	cmd.BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate validation")
 	cmd.StringVarP(&enclaveName, "enclave", "e", "", "Operate within the specified enclave")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -589,9 +551,7 @@ func dekCmd(args []string) {
 	ctx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancelCtx()
 
-	client := newClient(config{
-		InsecureSkipVerify: insecureSkipVerify,
-	})
+	client := newClient(config{})
 	key, err := client.GenerateKey(ctx, name, associatedData)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {

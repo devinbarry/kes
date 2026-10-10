@@ -6,22 +6,13 @@ package main
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/hex"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"log/slog"
-	"math/big"
 	"net"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
@@ -33,7 +24,6 @@ import (
 	"github.com/minio/kes/internal/cli"
 	"github.com/minio/kes/internal/sys"
 	"github.com/minio/kes/kesconf"
-	kesdk "github.com/minio/kms-go/kes"
 	flag "github.com/spf13/pflag"
 )
 
@@ -47,9 +37,6 @@ Options:
 
     --config <file>          Path to the KES server config file.
 
-    --dev                    Start the KES server in development mode. The server
-                             uses a volatile in-memory key store.
-
     -h, --help               Show list of command-line options
 
 
@@ -62,10 +49,7 @@ any point in time to scale out infinitely.
    Docs:        https://min.io/docs/kes/
 	
 Examples:
-  1. Start a new KES server on '127.0.0.1:7373' in development mode.
-     $ kes server --dev
-
-  2. Start a new KES server with a confg file on '127.0.0.1:7000'.
+  1. Start a new KES server with a config file on '127.0.0.1:7000'.
      $ kes server --addr :7000 --config ./kes/config.yml
 `
 
@@ -74,19 +58,11 @@ func serverCmd(args []string) {
 	cmd.Usage = func() { fmt.Fprint(os.Stderr, serverCmdUsage) }
 
 	var (
-		addrFlag     string
-		configFlag   string
-		tlsKeyFlag   string
-		tlsCertFlag  string
-		mtlsAuthFlag string
-		devFlag      bool
+		addrFlag   string
+		configFlag string
 	)
 	cmd.StringVar(&addrFlag, "addr", "", "The address of the server")
 	cmd.StringVar(&configFlag, "config", "", "Path to the server configuration file")
-	cmd.StringVar(&tlsKeyFlag, "key", "", "Path to the TLS private key")
-	cmd.StringVar(&tlsCertFlag, "cert", "", "Path to the TLS certificate")
-	cmd.StringVar(&mtlsAuthFlag, "auth", "", "Controls how the server handles mTLS authentication")
-	cmd.BoolVar(&devFlag, "dev", false, "Start the KES server in development mode")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(2)
@@ -94,33 +70,8 @@ func serverCmd(args []string) {
 		cli.Fatalf("%v. See 'kes server --help'", err)
 	}
 
-	warnPrefix := tui.NewStyle().Foreground(tui.Color("#ac0000")).Render("WARNING:")
-	if tlsKeyFlag != "" {
-		fmt.Fprintln(os.Stderr, warnPrefix, "'--key' flag is deprecated and no longer honored. Specify the private key in the config file")
-	}
-	if tlsCertFlag != "" {
-		fmt.Fprintln(os.Stderr, warnPrefix, "'--cert' flag is deprecated and no longer honored. Specify the certificate  in the config file")
-	}
-	if mtlsAuthFlag != "" {
-		fmt.Fprintln(os.Stderr, warnPrefix, "'--auth' flag is deprecated and no longer honored. Specify the client certificate verification in the config file")
-	}
-
 	if cmd.NArg() > 0 {
 		cli.Fatal("too many arguments. See 'kes server --help'")
-	}
-
-	if devFlag {
-		if addrFlag == "" {
-			addrFlag = "0.0.0.0:7373"
-		}
-		if configFlag != "" {
-			cli.Fatal("'--config' flag is not supported in development mode")
-		}
-
-		if err := startDevServer(addrFlag); err != nil {
-			cli.Fatal(err)
-		}
-		return
 	}
 
 	if err := startServer(addrFlag, configFlag); err != nil {
@@ -305,97 +256,6 @@ func startServer(addrFlag, configFlag string) error {
 	return nil
 }
 
-func startDevServer(addr string) error {
-	info, err := sys.ReadBinaryInfo()
-	if err != nil {
-		return err
-	}
-
-	host, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		return err
-	}
-	ip := net.IPv4zero
-	if host != "" {
-		if ip = net.ParseIP(host); ip == nil {
-			return fmt.Errorf("'%s' is not a valid IP address", host)
-		}
-	}
-	ifaceIPs, err := lookupInterfaceIPs(ip)
-	if err != nil {
-		return err
-	}
-	srvCert, err := generateDevServerCertificate(ifaceIPs...)
-	if err != nil {
-		return err
-	}
-
-	apiKey, err := kesdk.GenerateAPIKey(nil)
-	if err != nil {
-		return err
-	}
-
-	// Write API key to temporary file for dev access
-	keyFile := filepath.Join(os.TempDir(), "kes-dev-apikey.txt")
-	if err := os.WriteFile(keyFile, []byte(apiKey.String()), 0o600); err != nil {
-		return fmt.Errorf("failed to write API key file: %w", err)
-	}
-	defer os.Remove(keyFile)
-
-	tlsConf := &tls.Config{
-		MinVersion:   tls.VersionTLS12,
-		NextProtos:   []string{"h2", "http/1.1"},
-		Certificates: []tls.Certificate{srvCert},
-		ClientAuth:   tls.RequireAnyClientCert,
-	}
-
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
-
-	conf := &kes.Config{
-		Admin: apiKey.Identity(),
-		TLS:   tlsConf,
-		Cache: &kes.CacheConfig{
-			Expiry:        5 * time.Minute,
-			ExpiryUnused:  30 * time.Second,
-			ExpiryOffline: 0,
-		},
-		Keys: &kes.MemKeyStore{},
-	}
-	srv := &kes.Server{}
-
-	blue := tui.NewStyle().Foreground(tui.Color("#268BD2"))
-	faint := tui.NewStyle().Faint(true)
-
-	buf := &strings.Builder{}
-	fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Version"), info.Version, faint.Render("commit="+info.CommitID))
-	fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Runtime"), fmt.Sprintf("%s %s/%s", info.Runtime, runtime.GOOS, runtime.GOARCH), faint.Render("compiler="+info.Compiler))
-	fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("License"), "AGPLv3", faint.Render("https://www.gnu.org/licenses/agpl-3.0.html"))
-	fmt.Fprintf(buf, "%-33s %-12s 2015-%d  %s\n", blue.Render("Copyright"), "MinIO, Inc.", time.Now().Year(), faint.Render("https://min.io"))
-	fmt.Fprintln(buf)
-	fmt.Fprintf(buf, "%-33s %v\n", blue.Render("KMS"), conf.Keys)
-	fmt.Fprintf(buf, "%-33s · https://%s\n", blue.Render("API"), net.JoinHostPort(ifaceIPs[0].String(), port))
-	for _, ifaceIP := range ifaceIPs[1:] {
-		fmt.Fprintf(buf, "%-11s · https://%s\n", " ", net.JoinHostPort(ifaceIP.String(), port))
-	}
-	fmt.Fprintln(buf)
-	fmt.Fprintf(buf, "%-33s https://min.io/docs/kes\n", blue.Render("Docs"))
-	fmt.Fprintln(buf)
-	fmt.Fprintf(buf, "%-33s %s\n", blue.Render("API Key"), keyFile)
-	fmt.Fprintf(buf, "%-33s %s\n", blue.Render("Admin"), apiKey.Identity())
-	fmt.Fprintf(buf, "%-33s error=stderr level=%s\n", blue.Render("Logs"), srv.ErrLevel.Level())
-	fmt.Fprintf(buf, "%-11s audit=stdout level=%s\n", " ", srv.AuditLevel.Level())
-	fmt.Fprintln(buf)
-	fmt.Fprintln(buf, "=> Server is up and running...")
-	fmt.Println(buf.String())
-
-	if err := srv.ListenAndStart(ctx, addr, conf); err != nil {
-		return err
-	}
-	fmt.Println("\n=> Stopping server... Goodbye.")
-	return nil
-}
-
 // configureCache sets default values for each cache config option
 // as documented in: https://github.com/minio/kes/blob/master/server-config.yaml
 func configureCache(c *kes.CacheConfig) *kes.CacheConfig {
@@ -466,52 +326,4 @@ func lookupInterfaceIPs(listenerIP net.IP) ([]net.IP, error) {
 		return ipv6s, nil
 	}
 	return nil, errors.New("no IPv4 or IPv6 addresses available")
-}
-
-func generateDevServerCertificate(ipSANs ...net.IP) (tls.Certificate, error) {
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return tls.Certificate{}, err
-	}
-
-	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
-	if err != nil {
-		return tls.Certificate{}, err
-	}
-
-	template := x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject: pkix.Name{
-			CommonName: "localhost",
-		},
-		NotBefore: time.Now().UTC(),
-		NotAfter:  time.Now().UTC().Add(90 * 24 * time.Hour), // 90 days
-		KeyUsage:  x509.KeyUsageDigitalSignature,
-		ExtKeyUsage: []x509.ExtKeyUsage{
-			x509.ExtKeyUsageServerAuth,
-		},
-		BasicConstraintsValid: true,
-		IPAddresses:           ipSANs,
-	}
-
-	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, key.Public(), key)
-	if err != nil {
-		return tls.Certificate{}, err
-	}
-	privPKCS8, err := x509.MarshalPKCS8PrivateKey(key)
-	if err != nil {
-		return tls.Certificate{}, err
-	}
-	cert, err := tls.X509KeyPair(
-		pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}),
-		pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privPKCS8}),
-	)
-	if err != nil {
-		return tls.Certificate{}, err
-	}
-	if cert.Leaf == nil {
-		cert.Leaf, _ = x509.ParseCertificate(cert.Certificate[0])
-	}
-	return cert, nil
 }
