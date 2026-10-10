@@ -12,7 +12,7 @@ import (
 	"sync"
 )
 
-// Populated by goreleaser ldflags at build time.
+// Populated by -ldflags -X at build time (see Dockerfile).
 // When empty, falls back to VCS build info.
 var (
 	version  string
