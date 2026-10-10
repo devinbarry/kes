@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/minio/kms-go/kes"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 type ymlFile struct {

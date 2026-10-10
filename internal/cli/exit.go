@@ -8,24 +8,24 @@ import (
 	"fmt"
 	"os"
 
-	tui "github.com/charmbracelet/lipgloss"
+	tui "charm.land/lipgloss/v2"
 )
 
 // Exit prints args as error message and aborts with exit code 1.
 func Exit(args ...any) {
-	const FG tui.Color = "#ac0000"
+	FG := tui.Color("#ac0000")
 	s := tui.NewStyle().Foreground(FG).Render("Error: ")
 
-	fmt.Fprintln(os.Stderr, s+fmt.Sprint(args...))
+	tui.Fprintln(os.Stderr, s+fmt.Sprint(args...))
 	os.Exit(1)
 }
 
 // Exitf formats args as error message and aborts with exit code 1.
 func Exitf(format string, args ...any) {
-	const FG tui.Color = "#ac0000"
+	FG := tui.Color("#ac0000")
 	s := tui.NewStyle().Foreground(FG).Render("Error: ")
 
-	fmt.Fprintln(os.Stderr, s+fmt.Sprintf(format, args...))
+	tui.Fprintln(os.Stderr, s+fmt.Sprintf(format, args...))
 	os.Exit(1)
 }
 

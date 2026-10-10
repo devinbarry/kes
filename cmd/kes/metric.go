@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"aead.dev/mem"
-	tui "github.com/charmbracelet/lipgloss"
+	tui "charm.land/lipgloss/v2"
 	"github.com/minio/kes/internal/cli"
 	"github.com/minio/kms-go/kes"
 	flag "github.com/spf13/pflag"
@@ -33,7 +33,7 @@ Options:
 
 func metricCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, metricCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, metricCmdUsage) }
 
 	var (
 		rate time.Duration
@@ -91,21 +91,21 @@ func traceMetricsWithUI(ctx context.Context, client *kes.Client, rate time.Durat
 		red    = tui.NewStyle().Bold(true).Foreground(tui.Color("#fe0000"))
 	)
 	draw := func(metric *kes.Metric, reqRate float64) {
-		fmt.Println(header.Render("\nRequest    OK [2xx]       Err [4xx]       Err [5xx]      Req/s        Latency"))
-		fmt.Printf("%s%s%s%s%s\n",
+		tui.Println(header.Render("\nRequest    OK [2xx]       Err [4xx]       Err [5xx]      Req/s        Latency"))
+		tui.Printf("%s%s%s%s%s\n",
 			green.Render(fmt.Sprintf("%19d", metric.RequestOK)),
 			yellow.Render(fmt.Sprintf("%16d", metric.RequestErr)),
 			red.Render(fmt.Sprintf("%16d", metric.RequestFail)),
 			fmt.Sprintf("%11.2f", reqRate),
 			fmt.Sprintf("%15s", avgLatency(metric.LatencyHistogram).Round(time.Millisecond)),
 		)
-		fmt.Printf("%35s%33s%33s\n\n",
+		tui.Printf("%35s%33s%33s\n\n",
 			green.Render(fmt.Sprintf("%.2f%%", 100*float64(metric.RequestOK)/float64(metric.RequestN()))),
 			yellow.Render(fmt.Sprintf("%.2f%%", 100*float64(metric.RequestErr)/float64(metric.RequestN()))),
 			red.Render(fmt.Sprintf("%.2f%%", 100*float64(metric.RequestFail)/float64(metric.RequestN()))),
 		)
-		fmt.Println(header.Render("System       UpTime            Heap           Stack       CPUs        Threads"))
-		fmt.Printf(
+		tui.Println(header.Render("System       UpTime            Heap           Stack       CPUs        Threads"))
+		tui.Printf(
 			"%19s%16s%16s%11d%15d\n\n",
 			metric.UpTime,
 			mem.FormatSize(mem.Size(metric.HeapAlloc), 'D', 1),
@@ -115,7 +115,7 @@ func traceMetricsWithUI(ctx context.Context, client *kes.Client, rate time.Durat
 		)
 	}
 	clearScreen := func() {
-		fmt.Print(EraseLine, EraseLine, EraseLine, EraseLine, EraseLine, EraseLine, EraseLine, EraseLine)
+		tui.Print(EraseLine, EraseLine, EraseLine, EraseLine, EraseLine, EraseLine, EraseLine, EraseLine)
 	}
 
 	var (
@@ -124,8 +124,8 @@ func traceMetricsWithUI(ctx context.Context, client *kes.Client, rate time.Durat
 		reqRate  float64
 		drawn    bool
 	)
-	fmt.Print(HideCursor)
-	defer fmt.Print(ShowCursor)
+	tui.Print(HideCursor)
+	defer tui.Print(ShowCursor)
 
 	var wg sync.WaitGroup
 	wg.Add(1)

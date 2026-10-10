@@ -21,7 +21,7 @@ import (
 	"github.com/minio/kes/internal/https"
 	"github.com/minio/kes/internal/keystore/vault"
 	kesdk "github.com/minio/kms-go/kes"
-	yaml "gopkg.in/yaml.v3"
+	yaml "go.yaml.in/yaml/v3"
 )
 
 // ReadFile opens the given file and reads the KES configuration

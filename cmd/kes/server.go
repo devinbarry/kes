@@ -19,7 +19,7 @@ import (
 	"syscall"
 	"time"
 
-	tui "github.com/charmbracelet/lipgloss"
+	tui "charm.land/lipgloss/v2"
 	"github.com/minio/kes"
 	"github.com/minio/kes/internal/cli"
 	"github.com/minio/kes/internal/sys"
@@ -55,7 +55,7 @@ Examples:
 
 func serverCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, serverCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, serverCmdUsage) }
 
 	var (
 		addrFlag   string
@@ -147,32 +147,32 @@ func startServer(addrFlag, configFlag string) error {
 		faint := tui.NewStyle().Faint(true)
 
 		buf := &strings.Builder{}
-		fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Version"), info.Version, faint.Render("commit="+info.CommitID))
-		fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Runtime"), fmt.Sprintf("%s %s/%s", info.Runtime, runtime.GOOS, runtime.GOARCH), faint.Render("compiler="+info.Compiler))
-		fmt.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("License"), "AGPLv3", faint.Render("https://www.gnu.org/licenses/agpl-3.0.html"))
-		fmt.Fprintf(buf, "%-33s %-12s 2015-%d  %s\n", blue.Render("Copyright"), "MinIO, Inc.", time.Now().Year(), faint.Render("https://min.io"))
-		fmt.Fprintln(buf)
-		fmt.Fprintf(buf, "%-33s %v\n", blue.Render("KMS"), conf.Keys)
-		fmt.Fprintf(buf, "%-33s · https://%s\n", blue.Render("API"), net.JoinHostPort(ifaceIPs[0].String(), port))
+		tui.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Version"), info.Version, faint.Render("commit="+info.CommitID))
+		tui.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("Runtime"), fmt.Sprintf("%s %s/%s", info.Runtime, runtime.GOOS, runtime.GOARCH), faint.Render("compiler="+info.Compiler))
+		tui.Fprintf(buf, "%-33s %-23s %s\n", blue.Render("License"), "AGPLv3", faint.Render("https://www.gnu.org/licenses/agpl-3.0.html"))
+		tui.Fprintf(buf, "%-33s %-12s 2015-%d  %s\n", blue.Render("Copyright"), "MinIO, Inc.", time.Now().Year(), faint.Render("https://min.io"))
+		tui.Fprintln(buf)
+		tui.Fprintf(buf, "%-33s %v\n", blue.Render("KMS"), conf.Keys)
+		tui.Fprintf(buf, "%-33s · https://%s\n", blue.Render("API"), net.JoinHostPort(ifaceIPs[0].String(), port))
 		for _, ifaceIP := range ifaceIPs[1:] {
-			fmt.Fprintf(buf, "%-11s · https://%s\n", " ", net.JoinHostPort(ifaceIP.String(), port))
+			tui.Fprintf(buf, "%-11s · https://%s\n", " ", net.JoinHostPort(ifaceIP.String(), port))
 		}
 
-		fmt.Fprintln(buf)
-		fmt.Fprintf(buf, "%-33s https://min.io/docs/kes\n", blue.Render("Docs"))
+		tui.Fprintln(buf)
+		tui.Fprintf(buf, "%-33s https://min.io/docs/kes\n", blue.Render("Docs"))
 
-		fmt.Fprintln(buf)
+		tui.Fprintln(buf)
 		if _, err := hex.DecodeString(conf.Admin.String()); err == nil {
-			fmt.Fprintf(buf, "%-33s %s\n", blue.Render("Admin"), conf.Admin)
+			tui.Fprintf(buf, "%-33s %s\n", blue.Render("Admin"), conf.Admin)
 		} else {
-			fmt.Fprintf(buf, "%-33s <disabled>\n", blue.Render("Admin"))
+			tui.Fprintf(buf, "%-33s <disabled>\n", blue.Render("Admin"))
 		}
-		fmt.Fprintf(buf, "%-33s error=stderr level=%s\n", blue.Render("Logs"), srv.ErrLevel.Level())
+		tui.Fprintf(buf, "%-33s error=stderr level=%s\n", blue.Render("Logs"), srv.ErrLevel.Level())
 		if srv.AuditLevel.Level() <= slog.LevelInfo {
-			fmt.Fprintf(buf, "%-11s audit=stdout level=%s\n", " ", srv.AuditLevel.Level())
+			tui.Fprintf(buf, "%-11s audit=stdout level=%s\n", " ", srv.AuditLevel.Level())
 		}
 		if memLocked {
-			fmt.Fprintf(buf, "%-33s %s\n", blue.Render("MLock"), "enabled")
+			tui.Fprintf(buf, "%-33s %s\n", blue.Render("MLock"), "enabled")
 		}
 		return buf
 	}
@@ -183,23 +183,23 @@ func startServer(addrFlag, configFlag string) error {
 			case <-ctx.Done():
 				return
 			case <-sighup:
-				fmt.Fprintln(os.Stderr, "SIGHUP signal received. Reloading configuration...")
+				tui.Fprintln(os.Stderr, "SIGHUP signal received. Reloading configuration...")
 
 				file, err := kesconf.ReadFile(configFlag)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to reload server config: %v\n", err)
+					tui.Fprintf(os.Stderr, "Failed to reload server config: %v\n", err)
 					continue
 				}
 				config, err := file.Config(ctx)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to reload server config: %v\n", err)
+					tui.Fprintf(os.Stderr, "Failed to reload server config: %v\n", err)
 					continue
 				}
 				config.Cache = configureCache(config.Cache)
 
 				closer, err := srv.Update(config)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to update server configuration: %v\n", err)
+					tui.Fprintf(os.Stderr, "Failed to update server configuration: %v\n", err)
 					continue
 				}
 				if file.Log != nil {
@@ -208,12 +208,12 @@ func startServer(addrFlag, configFlag string) error {
 				}
 
 				if err = closer.Close(); err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to close previous keystore connections: %v\n", err)
+					tui.Fprintf(os.Stderr, "Failed to close previous keystore connections: %v\n", err)
 				}
 				buf := startupMessage(config)
-				fmt.Fprintln(buf)
-				fmt.Fprintln(buf, "=> Reloading configuration after SIGHUP signal completed.")
-				fmt.Println(buf.String())
+				tui.Fprintln(buf)
+				tui.Fprintln(buf, "=> Reloading configuration after SIGHUP signal completed.")
+				tui.Println(buf.String())
 			}
 		}
 	}(ctx)
@@ -229,30 +229,30 @@ func startServer(addrFlag, configFlag string) error {
 			case <-ticker.C:
 				file, err := kesconf.ReadFile(configFlag)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to reload TLS configuration: %v\n", err)
+					tui.Fprintf(os.Stderr, "Failed to reload TLS configuration: %v\n", err)
 					continue
 				}
 				conf, err := file.TLSConfig()
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to reload TLS configuration: %v\n", err)
+					tui.Fprintf(os.Stderr, "Failed to reload TLS configuration: %v\n", err)
 					continue
 				}
 				if err = srv.UpdateTLS(conf); err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to update TLS configuration: %v\n", err)
+					tui.Fprintf(os.Stderr, "Failed to update TLS configuration: %v\n", err)
 				}
 			}
 		}
 	}(ctx)
 
 	buf := startupMessage(conf)
-	fmt.Fprintln(buf)
-	fmt.Fprintln(buf, "=> Server is up and running...")
-	fmt.Println(buf.String())
+	tui.Fprintln(buf)
+	tui.Fprintln(buf, "=> Server is up and running...")
+	tui.Println(buf.String())
 
 	if err = srv.ListenAndStart(ctx, addrFlag, conf); err != nil {
 		return err
 	}
-	fmt.Println("\n=> Stopping server... Goodbye.")
+	tui.Println("\n=> Stopping server... Goodbye.")
 	return nil
 }
 

@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	tui "github.com/charmbracelet/lipgloss"
+	tui "charm.land/lipgloss/v2"
 	"github.com/minio/kes/internal/cli"
 	"github.com/minio/kes/internal/https"
 	"github.com/minio/kes/internal/sys"
@@ -54,7 +54,7 @@ func main() {
 	}
 
 	cmd := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, usage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, usage) }
 
 	subCmds := commands{
 		"server": serverCmd,
@@ -103,11 +103,11 @@ func main() {
 
 		faint := tui.NewStyle().Faint(true)
 		buf := &strings.Builder{}
-		fmt.Fprintf(buf, "Version    %-22s %s\n", info.Version, faint.Render("commit="+info.CommitID))
-		fmt.Fprintf(buf, "Runtime    %-22s %s\n", fmt.Sprintf("%s %s/%s", info.Runtime, runtime.GOOS, runtime.GOARCH), faint.Render("compiler="+info.Compiler))
-		fmt.Fprintf(buf, "License    %-22s %s\n", "AGPLv3", faint.Render("https://www.gnu.org/licenses/agpl-3.0.html"))
-		fmt.Fprintf(buf, "Copyright  %-22s %s\n", fmt.Sprintf("2015-%d MinIO Inc.", time.Now().Year()), faint.Render("https://min.io"))
-		fmt.Print(buf.String())
+		tui.Fprintf(buf, "Version    %-22s %s\n", info.Version, faint.Render("commit="+info.CommitID))
+		tui.Fprintf(buf, "Runtime    %-22s %s\n", fmt.Sprintf("%s %s/%s", info.Runtime, runtime.GOOS, runtime.GOARCH), faint.Render("compiler="+info.Compiler))
+		tui.Fprintf(buf, "License    %-22s %s\n", "AGPLv3", faint.Render("https://www.gnu.org/licenses/agpl-3.0.html"))
+		tui.Fprintf(buf, "Copyright  %-22s %s\n", fmt.Sprintf("2015-%d MinIO Inc.", time.Now().Year()), faint.Render("https://min.io"))
+		tui.Print(buf.String())
 		return
 	}
 
@@ -208,12 +208,12 @@ func newClient(conf config) *kes.Client {
 			cli.Fatalf("failed to read TLS private key: %v", err)
 		}
 		if len(privateKey.Headers) > 0 && x509.IsEncryptedPEMBlock(privateKey) {
-			fmt.Fprint(os.Stderr, "Enter password for private key: ")
+			tui.Fprint(os.Stderr, "Enter password for private key: ")
 			password, err := term.ReadPassword(int(os.Stderr.Fd()))
 			if err != nil {
 				cli.Exitf("reading password: %v", err)
 			}
-			fmt.Fprintln(os.Stderr) // Add the newline again
+			tui.Fprintln(os.Stderr) // Add the newline again
 
 			decPrivateKey, err := x509.DecryptPEMBlock(privateKey, password)
 			if err != nil {

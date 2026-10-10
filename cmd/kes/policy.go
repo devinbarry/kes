@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	tui "github.com/charmbracelet/lipgloss"
+	tui "charm.land/lipgloss/v2"
 	"github.com/minio/kes/internal/cli"
 	"github.com/minio/kms-go/kes"
 	flag "github.com/spf13/pflag"
@@ -35,7 +35,7 @@ Options:
 
 func policyCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, policyCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, policyCmdUsage) }
 
 	subCmds := commands{
 		"info": infoPolicyCmd,
@@ -68,11 +68,6 @@ const lsPolicyCmdUsage = `Usage:
 
 Options:
         --json               Print policies in JSON format.
-        --color <when>       Specify when to use colored output. The automatic
-                             mode only enables colors if an interactive terminal
-                             is detected - colors are automatically disabled if
-                             the output goes to a pipe.
-                             Possible values: *auto*, never, always.
 
     -h, --help               Print command line options.
 
@@ -83,14 +78,12 @@ Examples:
 
 func lsPolicyCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, lsPolicyCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, lsPolicyCmdUsage) }
 
 	var (
-		jsonFlag  bool
-		colorFlag colorOption
+		jsonFlag bool
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print identities in JSON format")
-	cmd.Var(&colorFlag, "color", "Specify when to use colored output")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(2)
@@ -133,15 +126,15 @@ func lsPolicyCmd(args []string) {
 	}
 
 	var (
-		style = tui.NewStyle().Underline(colorFlag.Colorize())
+		style = tui.NewStyle().Underline(cli.IsTerminal())
 		buf   = &strings.Builder{}
 	)
-	fmt.Fprintln(buf, style.Render("Key"))
+	tui.Fprintln(buf, style.Render("Key"))
 	for _, name := range names {
 		buf.WriteString(name)
 		buf.WriteByte('\n')
 	}
-	fmt.Print(buf)
+	tui.Print(buf)
 }
 
 const infoPolicyCmdUsage = `Usage:
@@ -149,11 +142,6 @@ const infoPolicyCmdUsage = `Usage:
 
 Options:
         --json               Print policy in JSON format.
-        --color <when>       Specify when to use colored output. The automatic
-                             mode only enables colors if an interactive terminal
-                             is detected - colors are automatically disabled if
-                             the output goes to a pipe.
-                             Possible values: *auto*, never, always.
     -e, --enclave <name>     Operate within the specified enclave.
 
     -h, --help               Print command line options.
@@ -164,15 +152,13 @@ Examples:
 
 func infoPolicyCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, infoPolicyCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, infoPolicyCmdUsage) }
 
 	var (
 		jsonFlag    bool
-		colorFlag   colorOption
 		enclaveName string
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print policy in JSON format.")
-	cmd.Var(&colorFlag, "color", "Specify when to use colored output")
 	cmd.StringVarP(&enclaveName, "enclave", "e", "", "Operate within the specified enclave")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -206,22 +192,22 @@ func infoPolicyCmd(args []string) {
 		}
 	} else {
 		var faint, policyStyle tui.Style
-		if colorFlag.Colorize() {
-			const ColorPolicy tui.Color = "#2e42d1"
+		if cli.IsTerminal() {
+			ColorPolicy := tui.Color("#2e42d1")
 			faint = faint.Faint(true)
 			policyStyle = policyStyle.Foreground(ColorPolicy)
 		}
-		fmt.Println(faint.Render(fmt.Sprintf("%-11s", "Name")), policyStyle.Render(name))
+		tui.Println(faint.Render(fmt.Sprintf("%-11s", "Name")), policyStyle.Render(name))
 		if !info.CreatedAt.IsZero() {
 			year, month, day := info.CreatedAt.Local().Date()
 			hour, minute, sec := info.CreatedAt.Local().Clock()
-			fmt.Println(
+			tui.Println(
 				faint.Render(fmt.Sprintf("%-11s", "Date")),
 				fmt.Sprintf("%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, sec),
 			)
 		}
 		if !info.CreatedBy.IsUnknown() {
-			fmt.Println(faint.Render(fmt.Sprintf("%-11s", "Created by")), info.CreatedBy)
+			tui.Println(faint.Render(fmt.Sprintf("%-11s", "Created by")), info.CreatedBy)
 		}
 	}
 }
@@ -241,7 +227,7 @@ Examples:
 
 func showPolicyCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, showPolicyCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, showPolicyCmdUsage) }
 
 	var (
 		jsonFlag    bool
@@ -293,40 +279,40 @@ func showPolicyCmd(args []string) {
 			cli.Fatalf("failed to show policy '%s': %v", name, err)
 		}
 	} else {
-		const (
-			Red   tui.Color = "#d70000"
-			Green tui.Color = "#00a700"
-			Cyan  tui.Color = "#00afaf"
+		var (
+			Red   = tui.Color("#d70000")
+			Green = tui.Color("#00a700")
+			Cyan  = tui.Color("#00afaf")
 		)
 		if len(policy.Allow) > 0 {
 			header := tui.NewStyle().Bold(true).Foreground(Green)
-			fmt.Println(header.Render("Allow:"))
+			tui.Println(header.Render("Allow:"))
 			for rule := range policy.Allow {
-				fmt.Println("  · " + rule)
+				tui.Println("  · " + rule)
 			}
 		}
 		if len(policy.Deny) > 0 {
 			if len(policy.Allow) > 0 {
-				fmt.Println()
+				tui.Println()
 			}
 			header := tui.NewStyle().Bold(true).Foreground(Red)
-			fmt.Println(header.Render("Deny:"))
+			tui.Println(header.Render("Deny:"))
 			for rule := range policy.Deny {
-				fmt.Println("  · " + rule)
+				tui.Println("  · " + rule)
 			}
 		}
 
-		fmt.Println()
+		tui.Println()
 		header := tui.NewStyle().Bold(true).Foreground(Cyan)
 		if !policy.CreatedAt.IsZero() {
 			year, month, day := policy.CreatedAt.Local().Date()
 			hour, minute, sec := policy.CreatedAt.Local().Clock()
-			fmt.Printf("\n%s %04d-%02d-%02d %02d:%02d:%02d\n", header.Render("Created at:"), year, month, day, hour, minute, sec)
+			tui.Printf("\n%s %04d-%02d-%02d %02d:%02d:%02d\n", header.Render("Created at:"), year, month, day, hour, minute, sec)
 		}
 		if !policy.CreatedBy.IsUnknown() {
-			fmt.Println(header.Render("Created by:"), policy.CreatedBy)
+			tui.Println(header.Render("Created by:"), policy.CreatedBy)
 		} else {
-			fmt.Println(header.Render("Created by:"), "<unknown>")
+			tui.Println(header.Render("Created by:"), "<unknown>")
 		}
 	}
 }

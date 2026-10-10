@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	tui "github.com/charmbracelet/lipgloss"
+	tui "charm.land/lipgloss/v2"
 )
 
 // A Buffer is used to efficiently build a string

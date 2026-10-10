@@ -7,7 +7,6 @@ package cli
 import (
 	"os"
 
-	tui "github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
 )
 
@@ -15,12 +14,3 @@ var isTerm = term.IsTerminal(int(os.Stdout.Fd())) || term.IsTerminal(int(os.Stde
 
 // IsTerminal reports whether stdout is a terminal.
 func IsTerminal() bool { return isTerm }
-
-// Fg returns a new style with the given foreground
-// color. All strings s are rendered with the style.
-// For example:
-//
-//	fmt.Println(cli.Fg(tui.ANSIColor(2), "Hello World"))
-func Fg(c tui.TerminalColor, s ...string) tui.Style {
-	return tui.NewStyle().Foreground(c).SetString(s...)
-}

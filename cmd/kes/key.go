@@ -9,14 +9,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"os/signal"
 	"slices"
 	"strings"
 
-	tui "github.com/charmbracelet/lipgloss"
+	tui "charm.land/lipgloss/v2"
 	"github.com/minio/kes/internal/cli"
 	"github.com/minio/kms-go/kes"
 	flag "github.com/spf13/pflag"
@@ -42,7 +41,7 @@ Options:
 
 func keyCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, keyCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, keyCmdUsage) }
 
 	subCmds := commands{
 		"create": createKeyCmd,
@@ -93,7 +92,7 @@ Examples:
 
 func createKeyCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, createKeyCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, createKeyCmdUsage) }
 
 	var (
 		enclaveName string
@@ -137,7 +136,7 @@ Examples:
 
 func importKeyCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, importKeyCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, importKeyCmdUsage) }
 
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -177,11 +176,6 @@ const describeKeyCmdUsage = `Usage:
 
 Options:
         --json               Print keys in JSON format. 
-        --color <when>       Specify when to use colored output. The automatic
-                             mode only enables colors if an interactive terminal
-                             is detected - colors are automatically disabled if
-                             the output goes to a pipe.
-                             Possible values: *auto*, never, always.
     -e, --enclave <name>     Operate within the specified enclave.
 
     -h, --help               Print command line options.
@@ -192,15 +186,13 @@ Examples:
 
 func describeKeyCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, describeKeyCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, describeKeyCmdUsage) }
 
 	var (
 		jsonFlag    bool
-		colorFlag   colorOption
 		enclaveName string
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print identities in JSON format")
-	cmd.Var(&colorFlag, "color", "Specify when to use colored output")
 	cmd.StringVarP(&enclaveName, "enclave", "e", "", "Operate within the specified enclave")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -239,11 +231,11 @@ func describeKeyCmd(args []string) {
 	hour, minute, sec := info.CreatedAt.Clock()
 
 	buf := &strings.Builder{}
-	fmt.Fprintf(buf, "%-11s %s\n", "Name", info.Name)
-	fmt.Fprintf(buf, "%-11s %s\n", "Algorithm", info.Algorithm)
-	fmt.Fprintf(buf, "%-11s %04d-%02d-%02d %02d:%02d:%02d\n", "Date", year, month, day, hour, minute, sec)
-	fmt.Fprintf(buf, "%-11s %s", "Owner", info.CreatedBy)
-	fmt.Print(buf)
+	tui.Fprintf(buf, "%-11s %s\n", "Name", info.Name)
+	tui.Fprintf(buf, "%-11s %s\n", "Algorithm", info.Algorithm)
+	tui.Fprintf(buf, "%-11s %04d-%02d-%02d %02d:%02d:%02d\n", "Date", year, month, day, hour, minute, sec)
+	tui.Fprintf(buf, "%-11s %s", "Owner", info.CreatedBy)
+	tui.Print(buf)
 }
 
 const lsKeyCmdUsage = `Usage:
@@ -251,11 +243,6 @@ const lsKeyCmdUsage = `Usage:
 
 Options:
         --json               Print keys in JSON format. 
-        --color <when>       Specify when to use colored output. The automatic
-                             mode only enables colors if an interactive terminal
-                             is detected - colors are automatically disabled if
-                             the output goes to a pipe.
-                             Possible values: *auto*, never, always.
     -e, --enclave <name>     Operate within the specified enclave.
 
     -h, --help               Print command line options.
@@ -267,15 +254,13 @@ Examples:
 
 func lsKeyCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, lsKeyCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, lsKeyCmdUsage) }
 
 	var (
 		jsonFlag    bool
-		colorFlag   colorOption
 		enclaveName string
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print identities in JSON format")
-	cmd.Var(&colorFlag, "color", "Specify when to use colored output")
 	cmd.StringVarP(&enclaveName, "enclave", "e", "", "Operate within the specified enclave")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -320,15 +305,15 @@ func lsKeyCmd(args []string) {
 	}
 
 	var (
-		style = tui.NewStyle().Underline(colorFlag.Colorize())
+		style = tui.NewStyle().Underline(cli.IsTerminal())
 		buf   = &strings.Builder{}
 	)
-	fmt.Fprintln(buf, style.Render("Key"))
+	tui.Fprintln(buf, style.Render("Key"))
 	for _, name := range names {
 		buf.WriteString(name)
 		buf.WriteByte('\n')
 	}
-	fmt.Print(buf)
+	tui.Print(buf)
 }
 
 const rmKeyCmdUsage = `Usage:
@@ -346,7 +331,7 @@ Examples:
 
 func rmKeyCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, rmKeyCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, rmKeyCmdUsage) }
 
 	var (
 		enclaveName string
@@ -390,7 +375,7 @@ Examples:
 
 func encryptKeyCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, encryptKeyCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, encryptKeyCmdUsage) }
 
 	var (
 		enclaveName string
@@ -428,9 +413,9 @@ func encryptKeyCmd(args []string) {
 	}
 
 	if cli.IsTerminal() {
-		fmt.Printf("\nciphertext: %s\n", base64.StdEncoding.EncodeToString(ciphertext))
+		tui.Printf("\nciphertext: %s\n", base64.StdEncoding.EncodeToString(ciphertext))
 	} else {
-		fmt.Printf(`{"ciphertext":"%s"}`, base64.StdEncoding.EncodeToString(ciphertext))
+		tui.Printf(`{"ciphertext":"%s"}`, base64.StdEncoding.EncodeToString(ciphertext))
 	}
 }
 
@@ -449,7 +434,7 @@ Examples:
 
 func decryptKeyCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, decryptKeyCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, decryptKeyCmdUsage) }
 
 	var (
 		enclaveName string
@@ -498,9 +483,9 @@ func decryptKeyCmd(args []string) {
 	}
 
 	if cli.IsTerminal() {
-		fmt.Printf("\nplaintext: %s\n", base64.StdEncoding.EncodeToString(plaintext))
+		tui.Printf("\nplaintext: %s\n", base64.StdEncoding.EncodeToString(plaintext))
 	} else {
-		fmt.Printf(`{"plaintext":"%s"}`, base64.StdEncoding.EncodeToString(plaintext))
+		tui.Printf(`{"plaintext":"%s"}`, base64.StdEncoding.EncodeToString(plaintext))
 	}
 }
 
@@ -518,7 +503,7 @@ Examples:
 
 func dekCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, dekCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, dekCmdUsage) }
 
 	var (
 		enclaveName string
@@ -566,9 +551,9 @@ func dekCmd(args []string) {
 	)
 	if cli.IsTerminal() {
 		const format = "\nplaintext:  %s\nciphertext: %s\n"
-		fmt.Printf(format, plaintext, ciphertext)
+		tui.Printf(format, plaintext, ciphertext)
 	} else {
 		const format = `{"plaintext":"%s","ciphertext":"%s"}`
-		fmt.Printf(format, plaintext, ciphertext)
+		tui.Printf(format, plaintext, ciphertext)
 	}
 }

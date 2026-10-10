@@ -7,14 +7,13 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"os/signal"
 	"slices"
 	"strings"
 
-	tui "github.com/charmbracelet/lipgloss"
+	tui "charm.land/lipgloss/v2"
 	"github.com/minio/kes/internal/cli"
 	"github.com/minio/kms-go/kes"
 	flag "github.com/spf13/pflag"
@@ -48,7 +47,7 @@ func ls(args []string) {
 	flagsServer(flags, &host)
 	flags.BoolVarP(&policies, "policy", "p", false, "")
 	flags.BoolVarP(&identities, "identity", "i", false, "")
-	flags.Usage = func() { fmt.Fprint(os.Stderr, lsUsage) }
+	flags.Usage = func() { tui.Fprint(os.Stderr, lsUsage) }
 
 	if err := flags.Parse(args[1:]); err != nil {
 		cli.Exit(err)
@@ -144,14 +143,14 @@ func ls(args []string) {
 	buf := &strings.Builder{}
 	switch s := tui.NewStyle().Underline(true); {
 	case identities:
-		fmt.Fprintln(buf, s.Render("Identity"))
+		tui.Fprintln(buf, s.Render("Identity"))
 	case policies:
-		fmt.Fprintln(buf, s.Render("Policy"))
+		tui.Fprintln(buf, s.Render("Policy"))
 	default:
-		fmt.Fprintln(buf, s.Render("Key"))
+		tui.Fprintln(buf, s.Render("Key"))
 	}
 	for _, name := range names {
-		fmt.Fprintln(buf, name)
+		tui.Fprintln(buf, name)
 	}
-	fmt.Print(buf)
+	tui.Print(buf)
 }

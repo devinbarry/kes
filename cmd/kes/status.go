@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"aead.dev/mem"
-	tui "github.com/charmbracelet/lipgloss"
+	tui "charm.land/lipgloss/v2"
 	"github.com/minio/kes/internal/cli"
 	"github.com/minio/kms-go/kes"
 	flag "github.com/spf13/pflag"
@@ -30,28 +30,21 @@ Options:
     -s, --short              Print status information in a short summary format.
         --api                List all server APIs.
         --json               Print status information in JSON format.
-        --color <when>       Specify when to use colored output. The automatic
-                             mode only enables colors if an interactive terminal
-                             is detected - colors are automatically disabled if
-                             the output goes to a pipe.
-                             Possible values: *auto*, never, always.
 
     -h, --help               Print command line options.
 `
 
 func statusCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, statusCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, statusCmdUsage) }
 
 	var (
 		jsonFlag  bool
 		shortFlag bool
 		apiFlag   bool
-		colorFlag colorOption
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print status information in JSON format")
 	cmd.BoolVar(&apiFlag, "api", false, "List all server APIs")
-	cmd.Var(&colorFlag, "color", "Specify when to use colored output")
 	cmd.BoolVarP(&shortFlag, "short", "s", false, "Print status information in a short summary format")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -105,8 +98,8 @@ func statusCmd(args []string) {
 	faint := tui.NewStyle()
 	dotStyle := tui.NewStyle()
 	endpointStyle := tui.NewStyle()
-	if colorFlag.Colorize() {
-		const (
+	if cli.IsTerminal() {
+		var (
 			ColorDot      = tui.Color("#00f700")
 			ColorEndpoint = tui.Color("#00afaf")
 		)
@@ -115,53 +108,53 @@ func statusCmd(args []string) {
 		endpointStyle = endpointStyle.Foreground(ColorEndpoint).Bold(true)
 	}
 
-	fmt.Println(dotStyle.Render("●"), endpointStyle.Render(strings.TrimPrefix(client.Endpoints[0], "https://")))
+	tui.Println(dotStyle.Render("●"), endpointStyle.Render(strings.TrimPrefix(client.Endpoints[0], "https://")))
 	if !shortFlag {
-		fmt.Println(
+		tui.Println(
 			faint.Render(fmt.Sprintf("  %-8s", "Version")),
 			status.Version,
 		)
 		switch {
 		case status.UpTime > 24*time.Hour:
-			fmt.Println(
+			tui.Println(
 				faint.Render(fmt.Sprintf("  %-8s", "Uptime")),
 				fmt.Sprintf("%.f days %.f hours", status.UpTime.Hours()/24, math.Mod(status.UpTime.Hours(), 24)),
 			)
 		case status.UpTime > 1*time.Hour:
-			fmt.Println(
+			tui.Println(
 				faint.Render(fmt.Sprintf("  %-8s", "Uptime")),
 				fmt.Sprintf("%.f hours", status.UpTime.Hours()),
 			)
 		case status.UpTime > 1*time.Minute:
-			fmt.Println(
+			tui.Println(
 				faint.Render(fmt.Sprintf("  %-8s", "Uptime")),
 				fmt.Sprintf("%.f minutes", status.UpTime.Minutes()),
 			)
 		default:
-			fmt.Println(
+			tui.Println(
 				faint.Render(fmt.Sprintf("  %-8s", "Uptime")),
 				fmt.Sprintf("%.f seconds", status.UpTime.Seconds()),
 			)
 		}
-		fmt.Println(
+		tui.Println(
 			faint.Render(fmt.Sprintf("  %-8s", "Latency")),
 			latency.Round(time.Millisecond),
 		)
-		fmt.Println(
+		tui.Println(
 			faint.Render(fmt.Sprintf("  %-8s", "OS")),
 			status.OS,
 		)
-		fmt.Println(
+		tui.Println(
 			faint.Render(fmt.Sprintf("  %-8s", "CPUs")),
 			strconv.Itoa(status.UsableCPUs),
 			status.Arch,
 		)
-		fmt.Println(faint.Render(fmt.Sprintf("  %-8s", "Memory")))
-		fmt.Println(
+		tui.Println(faint.Render(fmt.Sprintf("  %-8s", "Memory")))
+		tui.Println(
 			faint.Render(fmt.Sprintf("%3s %-6s", "·", "Heap")),
 			mem.FormatSize(mem.Size(status.HeapAlloc), 'D', 1),
 		)
-		fmt.Println(
+		tui.Println(
 			faint.Render(fmt.Sprintf("%3s %-6s", "·", "Stack")),
 			mem.FormatSize(mem.Size(status.StackAlloc), 'D', 1),
 		)
@@ -170,12 +163,12 @@ func statusCmd(args []string) {
 	if apiFlag {
 		header := tui.NewStyle()
 		pathStyle := tui.NewStyle()
-		if colorFlag.Colorize() {
+		if cli.IsTerminal() {
 			header = header.Faint(true).Underline(true).UnderlineSpaces(false)
-			pathStyle = pathStyle.Foreground(tui.AdaptiveColor{Light: "#2E42D1", Dark: "#2e8bc0"}).Inline(true)
+			pathStyle = pathStyle.Foreground(tui.Color("#2e8bc0")).Inline(true)
 		}
-		fmt.Println()
-		fmt.Println(
+		tui.Println()
+		tui.Println(
 			" ",
 			header.Render(fmt.Sprintf("%-7s", "Method")),
 			header.Render(fmt.Sprintf("%-28s", "API")),
@@ -187,7 +180,7 @@ func statusCmd(args []string) {
 			if api.Timeout > 0 {
 				timeout = api.Timeout.String()
 			}
-			fmt.Println(
+			tui.Println(
 				" ",
 				fmt.Sprintf("%-7s", api.Method),
 				pathStyle.Render(fmt.Sprintf("%-28s", api.Path)),

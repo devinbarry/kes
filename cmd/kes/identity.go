@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	tui "github.com/charmbracelet/lipgloss"
+	tui "charm.land/lipgloss/v2"
 	"github.com/minio/kes/internal/cli"
 	"github.com/minio/kes/internal/https"
 	"github.com/minio/kms-go/kes"
@@ -62,7 +62,7 @@ func identityCmd(args []string) {
 	}
 
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	flags.Usage = func() { fmt.Fprint(os.Stderr, identityCmdUsage) }
+	flags.Usage = func() { tui.Fprint(os.Stderr, identityCmdUsage) }
 	if err := flags.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(2)
@@ -81,45 +81,45 @@ func identityCmd(args []string) {
 		}
 
 		if !cli.IsTerminal() {
-			fmt.Print(key)
+			tui.Print(key)
 			return
 		}
 
 		buf := &strings.Builder{}
-		fmt.Fprintln(buf, "Your API key:")
-		fmt.Fprintln(buf)
-		fmt.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(key.String()))
-		fmt.Fprintln(buf)
-		fmt.Fprintln(buf, "This is the only time it is shown. Keep it secret and secure!")
-		fmt.Fprintln(buf)
-		fmt.Fprintln(buf, "Your API key's identity:")
-		fmt.Fprintln(buf)
-		fmt.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(key.Identity().String()))
-		fmt.Fprintln(buf)
-		fmt.Fprintln(buf, "The identity is not a secret and can be shared securely.")
-		fmt.Fprintln(buf, "Peers need your identity in order to verify your API key.")
-		fmt.Fprintln(buf)
-		fmt.Fprintln(buf, "This identity can be re-computed again via:")
-		fmt.Fprintln(buf)
-		fmt.Fprintf(buf, "  $ kes identity %s", key.String())
-		fmt.Println(tui.NewStyle().Border(tui.HiddenBorder()).Padding(0, 0, 0, 0).Render(buf.String()))
+		tui.Fprintln(buf, "Your API key:")
+		tui.Fprintln(buf)
+		tui.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(key.String()))
+		tui.Fprintln(buf)
+		tui.Fprintln(buf, "This is the only time it is shown. Keep it secret and secure!")
+		tui.Fprintln(buf)
+		tui.Fprintln(buf, "Your API key's identity:")
+		tui.Fprintln(buf)
+		tui.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(key.Identity().String()))
+		tui.Fprintln(buf)
+		tui.Fprintln(buf, "The identity is not a secret and can be shared securely.")
+		tui.Fprintln(buf, "Peers need your identity in order to verify your API key.")
+		tui.Fprintln(buf)
+		tui.Fprintln(buf, "This identity can be re-computed again via:")
+		tui.Fprintln(buf)
+		tui.Fprintf(buf, "  $ kes identity %s", key.String())
+		tui.Println(tui.NewStyle().Border(tui.HiddenBorder()).Padding(0, 0, 0, 0).Render(buf.String()))
 		return
 	}
 
 	printIdentity := func(identity kes.Identity) {
 		if !cli.IsTerminal() {
-			fmt.Print(identity)
+			tui.Print(identity)
 			return
 		}
 
 		buf := &strings.Builder{}
-		fmt.Fprintln(buf, "Identity:")
-		fmt.Fprintln(buf)
-		fmt.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(identity.String()))
-		fmt.Fprintln(buf)
-		fmt.Fprintln(buf, "An identity is a fingerprint of your API key")
-		fmt.Fprint(buf, "or certificate and can be shared securely.")
-		fmt.Println(tui.NewStyle().Border(tui.HiddenBorder()).Padding(0, 0, 0, 0).Render(buf.String()))
+		tui.Fprintln(buf, "Identity:")
+		tui.Fprintln(buf)
+		tui.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(identity.String()))
+		tui.Fprintln(buf)
+		tui.Fprintln(buf, "An identity is a fingerprint of your API key")
+		tui.Fprint(buf, "or certificate and can be shared securely.")
+		tui.Println(tui.NewStyle().Border(tui.HiddenBorder()).Padding(0, 0, 0, 0).Render(buf.String()))
 	}
 	if key, err := kes.ParseAPIKey(flags.Arg(0)); err == nil {
 		printIdentity(key.Identity())
@@ -161,17 +161,17 @@ func identityCmd(args []string) {
 			apiKey := "kes:v1:" + base64.StdEncoding.EncodeToString(append([]byte{0}, key[:ed25519.SeedSize]...))
 
 			if !cli.IsTerminal() {
-				fmt.Print(apiKey)
+				tui.Print(apiKey)
 				return
 			}
 			buf := &strings.Builder{}
-			fmt.Fprintln(buf, "Your API key:")
-			fmt.Fprintln(buf)
-			fmt.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(apiKey))
-			fmt.Fprintln(buf)
-			fmt.Fprintf(buf, "It corresponds to the private key in: %s.\n", filename)
-			fmt.Fprint(buf, "Keep it secret and secure!")
-			fmt.Println(tui.NewStyle().Border(tui.HiddenBorder()).Padding(0, 0, 0, 0).Render(buf.String()))
+			tui.Fprintln(buf, "Your API key:")
+			tui.Fprintln(buf)
+			tui.Fprintln(buf, "  ", tui.NewStyle().Bold(true).Render(apiKey))
+			tui.Fprintln(buf)
+			tui.Fprintf(buf, "It corresponds to the private key in: %s.\n", filename)
+			tui.Fprint(buf, "Keep it secret and secure!")
+			tui.Println(tui.NewStyle().Border(tui.HiddenBorder()).Padding(0, 0, 0, 0).Render(buf.String()))
 			return
 		}
 	}
@@ -205,7 +205,7 @@ Examples:
 
 func newIdentityCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, newIdentityCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, newIdentityCmdUsage) }
 
 	var (
 		keyPath   string
@@ -300,18 +300,18 @@ func newIdentityCmd(args []string) {
 
 		var keyPem []byte
 		if encrypt {
-			fmt.Fprint(os.Stderr, "Enter password for private key:")
+			tui.Fprint(os.Stderr, "Enter password for private key:")
 			p, err := term.ReadPassword(int(os.Stderr.Fd()))
 			if err != nil {
 				cli.Fatal(err)
 			}
-			fmt.Fprintln(os.Stderr)
-			fmt.Fprint(os.Stderr, "Confirm password for private key:")
+			tui.Fprintln(os.Stderr)
+			tui.Fprint(os.Stderr, "Confirm password for private key:")
 			confirm, err := term.ReadPassword(int(os.Stderr.Fd()))
 			if err != nil {
 				cli.Fatal(err)
 			}
-			fmt.Fprintln(os.Stderr)
+			tui.Fprintln(os.Stderr)
 			if !bytes.Equal(p, confirm) {
 				cli.Fatal("passwords don't match")
 			}
@@ -340,27 +340,27 @@ func newIdentityCmd(args []string) {
 		bold = bold.Bold(true)
 	}
 	var buffer strings.Builder
-	fmt.Fprintln(&buffer, "Your API key:")
-	fmt.Fprintln(&buffer)
-	fmt.Fprintln(&buffer, "   "+bold.Render(key.String())+"\n")
-	fmt.Fprintln(&buffer, "This is the only time it is shown. Keep it secret and secure!")
-	fmt.Fprintln(&buffer)
-	fmt.Fprintln(&buffer, "Your Identity:")
-	fmt.Fprintln(&buffer)
-	fmt.Fprintln(&buffer, "   "+bold.Render(key.Identity().String())+"\n")
-	fmt.Fprintln(&buffer, "The identity is not a secret. It can be shared. Any peer")
-	fmt.Fprintln(&buffer, "needs this identity in order to verify your API key.")
+	tui.Fprintln(&buffer, "Your API key:")
+	tui.Fprintln(&buffer)
+	tui.Fprintln(&buffer, "   "+bold.Render(key.String())+"\n")
+	tui.Fprintln(&buffer, "This is the only time it is shown. Keep it secret and secure!")
+	tui.Fprintln(&buffer)
+	tui.Fprintln(&buffer, "Your Identity:")
+	tui.Fprintln(&buffer)
+	tui.Fprintln(&buffer, "   "+bold.Render(key.Identity().String())+"\n")
+	tui.Fprintln(&buffer, "The identity is not a secret. It can be shared. Any peer")
+	tui.Fprintln(&buffer, "needs this identity in order to verify your API key.")
 	if keyPath != "" && certPath != "" {
-		fmt.Fprintln(&buffer)
-		fmt.Fprintf(&buffer, "The generated TLS private key is stored at: %s\n", keyPath)
-		fmt.Fprintf(&buffer, "The generated TLS certificate is stored at: %s\n", certPath)
+		tui.Fprintln(&buffer)
+		tui.Fprintf(&buffer, "The generated TLS private key is stored at: %s\n", keyPath)
+		tui.Fprintf(&buffer, "The generated TLS certificate is stored at: %s\n", certPath)
 	}
-	fmt.Fprintln(&buffer)
-	fmt.Fprintln(&buffer, "The identity can be computed again via:")
-	fmt.Fprintln(&buffer)
-	fmt.Fprintf(&buffer, "    kes identity of %s\n", key.String())
+	tui.Fprintln(&buffer)
+	tui.Fprintln(&buffer, "The identity can be computed again via:")
+	tui.Fprintln(&buffer)
+	tui.Fprintf(&buffer, "    kes identity of %s\n", key.String())
 	if keyPath != "" && certPath != "" {
-		fmt.Fprintf(&buffer, "    kes identity of %s", certPath)
+		tui.Fprintf(&buffer, "    kes identity of %s", certPath)
 	}
 	cli.Println(buffer.String())
 }
@@ -379,7 +379,7 @@ Examples:
 
 func ofIdentityCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, ofIdentityCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, ofIdentityCmdUsage) }
 
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -419,12 +419,12 @@ func ofIdentityCmd(args []string) {
 	}
 	if cli.IsTerminal() {
 		var buffer strings.Builder
-		fmt.Fprintln(&buffer, "Identity:")
-		fmt.Fprintln(&buffer)
-		fmt.Fprintln(&buffer, "   "+tui.NewStyle().Bold(true).Render(identity.String()))
+		tui.Fprintln(&buffer, "Identity:")
+		tui.Fprintln(&buffer)
+		tui.Fprintln(&buffer, "   "+tui.NewStyle().Bold(true).Render(identity.String()))
 		cli.Print(buffer.String())
 	} else {
-		fmt.Print(identity)
+		tui.Print(identity)
 	}
 }
 
@@ -433,11 +433,6 @@ const infoIdentityCmdUsage = `Usage:
 
 Options:
         --json               Print identity information in JSON format.
-        --color <when>       Specify when to use colored output. The automatic
-                             mode only enables colors if an interactive terminal
-                             is detected - colors are automatically disabled if
-                             the output goes to a pipe.
-                             Possible values: *auto*, never, always.
 
     -h, --help               Print command line options.
 
@@ -448,15 +443,13 @@ Examples:
 
 func infoIdentityCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, infoIdentityCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, infoIdentityCmdUsage) }
 
 	var (
 		jsonFlag    bool
-		colorFlag   colorOption
 		enclaveName string
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print policy information in JSON format")
-	cmd.Var(&colorFlag, "color", "Specify when to use colored output")
 	cmd.StringVarP(&enclaveName, "enclave", "e", "", "Operate within the specified enclave")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -473,12 +466,12 @@ func infoIdentityCmd(args []string) {
 	defer cancelCtx()
 
 	var faint, identityStyle, policyStyle, dotAllowStyle, dotDenyStyle tui.Style
-	if colorFlag.Colorize() {
-		const (
-			ColorIdentity tui.Color = "#2e42d1"
-			ColorPolicy   tui.Color = "#d1bd2e"
-			ColorDotAllow tui.Color = "#00d700"
-			ColorDotDeny  tui.Color = "#d70000"
+	if cli.IsTerminal() {
+		var (
+			ColorIdentity = tui.Color("#2e42d1")
+			ColorPolicy   = tui.Color("#d1bd2e")
+			ColorDotAllow = tui.Color("#00d700")
+			ColorDotDeny  = tui.Color("#d70000")
 		)
 		faint = faint.Faint(true).Bold(true)
 		identityStyle = identityStyle.Foreground(ColorIdentity)
@@ -496,42 +489,42 @@ func infoIdentityCmd(args []string) {
 		year, month, day := info.CreatedAt.Date()
 		hour, minute, sec := info.CreatedAt.Clock()
 
-		fmt.Println(
+		tui.Println(
 			faint.Render(fmt.Sprintf("%-11s", "Identity")),
 			identityStyle.Render(info.Identity.String()),
 		)
-		fmt.Println(
+		tui.Println(
 			faint.Render(fmt.Sprintf("%-11s", "Created At")),
 			fmt.Sprintf("%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, sec),
 		)
 		if info.IsAdmin {
-			fmt.Println(faint.Render(fmt.Sprintf("%-11s", "Role")), "Admin")
+			tui.Println(faint.Render(fmt.Sprintf("%-11s", "Role")), "Admin")
 		} else {
-			fmt.Println(faint.Render(fmt.Sprintf("%-11s", "Role")), "User")
+			tui.Println(faint.Render(fmt.Sprintf("%-11s", "Role")), "User")
 		}
 		if !info.CreatedBy.IsUnknown() {
-			fmt.Println(faint.Render(fmt.Sprintf("%-11s", "Created By")), info.CreatedBy)
+			tui.Println(faint.Render(fmt.Sprintf("%-11s", "Created By")), info.CreatedBy)
 		}
 		if info.Policy != "" {
 			year, month, day := policy.CreatedAt.Date()
 			hour, minute, sec := policy.CreatedAt.Clock()
 
-			fmt.Println()
-			fmt.Println(faint.Render(fmt.Sprintf("%-11s", "Policy")), policyStyle.Render(info.Policy))
-			fmt.Println(
+			tui.Println()
+			tui.Println(faint.Render(fmt.Sprintf("%-11s", "Policy")), policyStyle.Render(info.Policy))
+			tui.Println(
 				faint.Render(fmt.Sprintf("%-11s", "Created At")),
 				fmt.Sprintf("%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, sec),
 			)
 			if len(policy.Allow) > 0 {
-				fmt.Println(faint.Render(fmt.Sprintf("%-11s", "Allow")))
+				tui.Println(faint.Render(fmt.Sprintf("%-11s", "Allow")))
 				for _, allow := range policy.Allow {
-					fmt.Println(fmt.Sprintf("%-11s", " "), dotAllowStyle.Render("·"), allow)
+					tui.Println(fmt.Sprintf("%-11s", " "), dotAllowStyle.Render("·"), allow)
 				}
 			}
 			if len(policy.Deny) > 0 {
-				fmt.Println(faint.Render(fmt.Sprintf("%-11s", "Deny")))
+				tui.Println(faint.Render(fmt.Sprintf("%-11s", "Deny")))
 				for _, deny := range policy.Deny {
-					fmt.Println(fmt.Sprintf("%-11s", " "), dotDenyStyle.Render("·"), deny)
+					tui.Println(fmt.Sprintf("%-11s", " "), dotDenyStyle.Render("·"), deny)
 				}
 			}
 		}
@@ -543,24 +536,24 @@ func infoIdentityCmd(args []string) {
 		year, month, day := info.CreatedAt.Date()
 		hour, minute, sec := info.CreatedAt.Clock()
 
-		fmt.Println(
+		tui.Println(
 			faint.Render(fmt.Sprintf("%-11s", "Identity")),
 			identityStyle.Render(info.Identity.String()),
 		)
 		if info.Policy != "" {
-			fmt.Println(faint.Render(fmt.Sprintf("%-11s", "Policy")), policyStyle.Render(info.Policy))
+			tui.Println(faint.Render(fmt.Sprintf("%-11s", "Policy")), policyStyle.Render(info.Policy))
 		}
-		fmt.Println(
+		tui.Println(
 			faint.Render(fmt.Sprintf("%-11s", "Created At")),
 			fmt.Sprintf("%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, sec),
 		)
 		if info.IsAdmin {
-			fmt.Println(faint.Render(fmt.Sprintf("%-11s", "Role")), "Admin")
+			tui.Println(faint.Render(fmt.Sprintf("%-11s", "Role")), "Admin")
 		} else {
-			fmt.Println(faint.Render(fmt.Sprintf("%-11s", "Role")), "User")
+			tui.Println(faint.Render(fmt.Sprintf("%-11s", "Role")), "User")
 		}
 		if !info.CreatedBy.IsUnknown() {
-			fmt.Println(faint.Render(fmt.Sprintf("%-11s", "Created By")), info.CreatedBy)
+			tui.Println(faint.Render(fmt.Sprintf("%-11s", "Created By")), info.CreatedBy)
 		}
 	}
 }
@@ -570,11 +563,6 @@ const lsIdentityCmdUsage = `Usage:
 
 Options:
         --json               Print identities in JSON format.
-        --color <when>       Specify when to use colored output. The automatic
-                             mode only enables colors if an interactive terminal
-                             is detected - colors are automatically disabled if
-                             the output goes to a pipe.
-                             Possible values: *auto*, never, always.
 
     -h, --help               Print command line options.
 
@@ -585,14 +573,12 @@ Examples:
 
 func lsIdentityCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, lsIdentityCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, lsIdentityCmdUsage) }
 
 	var (
-		jsonFlag  bool
-		colorFlag colorOption
+		jsonFlag bool
 	)
 	cmd.BoolVar(&jsonFlag, "json", false, "Print identities in JSON format")
-	cmd.Var(&colorFlag, "color", "Specify when to use colored output")
 	if err := cmd.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(2)
@@ -636,13 +622,13 @@ func lsIdentityCmd(args []string) {
 	}
 
 	var (
-		style = tui.NewStyle().Underline(colorFlag.Colorize())
+		style = tui.NewStyle().Underline(cli.IsTerminal())
 		buf   = &strings.Builder{}
 	)
-	fmt.Fprintln(buf, style.Render("Identity"))
+	tui.Fprintln(buf, style.Render("Identity"))
 	for _, id := range ids {
 		buf.WriteString(id.String())
 		buf.WriteByte('\n')
 	}
-	fmt.Print(buf)
+	tui.Print(buf)
 }

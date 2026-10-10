@@ -7,14 +7,13 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
 	"time"
 
-	tui "github.com/charmbracelet/lipgloss"
+	tui "charm.land/lipgloss/v2"
 	"github.com/minio/kes/internal/cli"
 	"github.com/minio/kms-go/kes"
 
@@ -38,7 +37,7 @@ Examples:
 
 func logCmd(args []string) {
 	cmd := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	cmd.Usage = func() { fmt.Fprint(os.Stderr, logCmdUsage) }
+	cmd.Usage = func() { tui.Fprint(os.Stderr, logCmdUsage) }
 
 	var (
 		auditFlag bool
@@ -113,8 +112,8 @@ func printAuditLog(stream *kes.AuditStream) {
 	var (
 		statStyleFail    = tui.NewStyle().Foreground(tui.Color("#ff0000")).Width(5)
 		statStyleSuccess = tui.NewStyle().Foreground(tui.Color("#00ff00")).Width(5)
-		identityStyle    = tui.NewStyle().Foreground(tui.AdaptiveColor{Light: "#D1BD2E", Dark: "#C6A18C"}).MaxWidth(20).Inline(true)
-		apiStyle         = tui.NewStyle().Foreground(tui.AdaptiveColor{Light: "#2E42D1", Dark: "#2e8bc0"}).Width(30).Inline(true)
+		identityStyle    = tui.NewStyle().Foreground(tui.Color("#C6A18C")).MaxWidth(20).Inline(true)
+		apiStyle         = tui.NewStyle().Foreground(tui.Color("#2e8bc0")).Width(30).Inline(true)
 		ipStyle          = tui.NewStyle().Width(15).Inline(true)
 	)
 	const (
@@ -123,9 +122,9 @@ func printAuditLog(stream *kes.AuditStream) {
 	)
 
 	if cli.IsTerminal() {
-		fmt.Println(tui.NewStyle().Bold(true).Underline(true).Render(header))
+		tui.Println(tui.NewStyle().Bold(true).Underline(true).Render(header))
 	} else {
-		fmt.Println(header)
+		tui.Println(header)
 	}
 	for stream.Next() {
 		event := stream.Event()
@@ -162,7 +161,7 @@ func printAuditLog(stream *kes.AuditStream) {
 		}
 		ipAddr = ipStyle.Render(ipAddr)
 
-		fmt.Printf(format, hour, minute, sec, status, identity, ipAddr, apiPath, latency)
+		tui.Printf(format, hour, minute, sec, status, identity, ipAddr, apiPath, latency)
 	}
 	if err := stream.Close(); err != nil {
 		if errors.Is(err, context.Canceled) {
@@ -174,7 +173,7 @@ func printAuditLog(stream *kes.AuditStream) {
 
 func printErrorLog(stream *kes.ErrorStream) {
 	for stream.Next() {
-		fmt.Println(stream.Event().Message)
+		tui.Println(stream.Event().Message)
 	}
 	if err := stream.Close(); err != nil {
 		if errors.Is(err, context.Canceled) {
