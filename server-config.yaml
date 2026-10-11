@@ -13,24 +13,28 @@ admin:
   identity: c84cc9b91ae2399b043da7eca616048d4b4200edf2ff418d8af3835911db945d
 
 # The TLS configuration for the KES server. A KES server
-# accepts HTTP only over TLS (HTTPS). Therefore, a TLS
-# private key and public certificate must be specified,
-# either here as part of the config file or via CLI arguments.
+# accepts only TLS 1.3 connections, and every client must
+# present a certificate. The TLS private key and certificate
+# must be specified here.
 tls:
   key:      ./server.key   # Path to the TLS private key
   cert:     ./server.cert  # Path to the TLS certificate
   password: ""             # An optional password to decrypt the TLS private key
 
-  # Specify how/whether the KES server verifies certificates presented
-  # by clients. Valid values are "on" and "off". Defaults to off, which
-  # is recommended for most use cases.
+  # Specify whether the KES server verifies the certificate chain
+  # presented by clients. Valid values are "on" and "off".
+  #   off (default): any client certificate completes the handshake;
+  #                  the client is identified by the hash of its public
+  #                  key and authorized only through the policies below.
+  #   on:            the client certificate must also chain to a CA in 'ca'.
+  # A client without a certificate is always rejected.
   auth:     ""
 
-  # An optional path to a file or directory containing X.509 certificate(s).
-  # If set, the certificate(s) get added to the list of CA certificates for
-  # verifying the mTLS certificates sent by the KES clients.
+  # An optional path to a file or directory containing X.509 certificate(s)
+  # used to verify client certificates when 'auth' is "on". If set, only
+  # these certificates are trusted; the system root CAs are not added.
   #
-  # If empty, the system root CAs will be used.
+  # If empty, the system root CAs are used.
   ca:       ""
 
 # The API configuration. The APIs exposed by the KES server can
@@ -162,22 +166,21 @@ keys:
   - name: some-key-name
   - name: another-key-name
 
-# The keystore section specifies which KMS - or in general key store - is
-# used to store and fetch encryption keys.
-# A KES server can only use one KMS / key store at the same time.
-# If no store is explicitly specified, the server will store
-# keys in-memory. In this case all keys are lost when the KES server
-# restarts.
+# The keystore section specifies the key store used to store and fetch
+# encryption keys. This fork supports only HashiCorp Vault, and the
+# server refuses to start without it.
 keystore:
   # Hashicorp Vault configuration. The KES server will store/fetch
-  # secret keys at/from Vault's key-value backend.
+  # secret keys at/from Vault's K/V v2 secrets engine and logs in
+  # with AppRole. The server refuses to start if any VAULT_*
+  # environment variable is set, and never uses an HTTP proxy.
   #
   # For more information, see:
-  # https://www.vaultproject.io/api/secret/kv/kv-v1.html
+  # https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2
   vault:
-    endpoint: ""  # The Vault endpoint - for example, https://127.0.0.1:8200
+    endpoint: ""  # The Vault endpoint. Must be https:// - for example, https://127.0.0.1:8200
     engine: ""    # The path of the K/V engine - for example, secrets. If empty, defaults to: kv. (Vault default)
-    version: ""   # The K/V engine version - either "v1" or "v2". The "v1" engine is recommended.
+    version: v2   # The K/V engine version. Must be "v2".
     namespace: "" # An optional Vault namespace. See: https://www.vaultproject.io/docs/enterprise/namespaces/index.html
     prefix: ""    # An optional K/V prefix. The server will store keys under this prefix.
     transit:      # Optionally encrypt keys stored on the K/V engine with a Vault-managed key.
@@ -188,14 +191,9 @@ keystore:
       engine: ""    # The path to the AppRole engine, for example: authenticate. If empty, defaults to: approle. (Vault default)
       id: ""        # Your AppRole Role ID
       secret: ""    # Your AppRole Secret ID
-    kubernetes: # Kubernetes credentials. See: https://www.vaultproject.io/docs/auth/kubernetes
-      namespace: "" # Optional Vault namespace used only for authentication. For the Vault root namespace, use "/".
-      engine: ""    # The path of the Kubernetes engine for example, authenticate. If empty, defaults to: kubernetes. (Vault default)
-      role: ""      # The Kubernetes JWT role
-      jwt:  ""      # Either the JWT provided by K8S or a path to a K8S secret containing the JWT.
-    tls:        # The Vault client TLS configuration for mTLS authentication and certificate verification
+    tls:        # The Vault client TLS configuration (TLS 1.3, certificate verification always on)
       key: ""     # Path to the TLS client private key for mTLS authentication to Vault
       cert: ""    # Path to the TLS client certificate for mTLS authentication to Vault
-      ca: ""      # Path to one or more PEM root CA certificates
+      ca: ""      # Path to one or more PEM root CA certificates. Replaces the system roots; required in the container image, which has none.
     status:     # Vault status configuration. The server will periodically reach out to Vault to check its status.
       ping: 10s   # Duration until the server checks Vault's status again.

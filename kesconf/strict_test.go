@@ -5,9 +5,29 @@
 package kesconf
 
 import (
+	"os"
 	"strings"
 	"testing"
+
+	yaml "go.yaml.in/yaml/v3"
 )
+
+// The annotated sample config leaves credentials empty, so it is only
+// checked for options this fork no longer knows.
+func TestSampleServerConfigHasOnlyKnownFields(t *testing.T) {
+	f, err := os.Open("../server-config.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	var y ymlFile
+	dec := yaml.NewDecoder(f)
+	dec.KnownFields(true)
+	if err := dec.Decode(&y); err != nil {
+		t.Fatalf("Sample config contains an unknown option: %v", err)
+	}
+}
 
 func TestReadServerConfigYAML_Production(t *testing.T) {
 	const Identity = "3ecfcdf38fcbe141ae26a1030f81e96b753365a46760ae6b578698a97c59fd22"
